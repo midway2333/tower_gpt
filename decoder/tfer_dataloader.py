@@ -42,8 +42,8 @@ class tfer_DataLoader:
         将其转换为适合训练模型的格式
 
         返回:
-        - x (torch.Tensor): 输入张量。
-        - y (torch.Tensor): 目标张量。
+        - x (torch.Tensor): 输入张量
+        - y (torch.Tensor): 目标张量
 
         """
 
