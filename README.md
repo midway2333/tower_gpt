@@ -4,7 +4,7 @@
 
 ~~除了学习使用外实用性基本为零~~
 
-## 配置文件
+## 配置需求
 torch2.0或更高<br>
 sentencepiece库<br>
 galore-torch库<br>
