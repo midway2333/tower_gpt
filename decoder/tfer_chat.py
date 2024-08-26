@@ -76,7 +76,7 @@ class decoder(nn.Module):
             # 并将每个头的输出添加到heads_res列表中
 
         a = self.o(torch.concat(heads_res, dim = -1))
-        # 将heads_res列表中的所有输出沿最后一个维度(dim = -1)连接起来
+        # 将heads_res列表中的所有输出沿最后一个维度(dim=-1)连接起来
         # 然后将多头注意力机制的输出合并成一个单一的输出
         # a:多头注意力机制的输出
 
@@ -91,7 +91,9 @@ class decoder(nn.Module):
 
 class transformer(nn.Module):   # 模型实现
 
-    def __init__(self, decoder_num=6, head_num=8, d=512, dk=256, dff=1024, vocab_size=122880):
+    def __init__(self, decoder_num=6, head_num=8, d=512, dk=256,   \
+                  dff=1024, vocab_size=122880, padding_idx=3):
+        # 在自带词表中padding_idx=3
 
         super().__init__()
         self.mask = Tensor()
@@ -102,7 +104,9 @@ class transformer(nn.Module):   # 模型实现
         self.d = d
         self.vocab_size = vocab_size
 
-        self.embedding = nn.Embedding(self.vocab_size, d).to(device)   # 使用独立嵌入层
+        self.embedding = nn.Embedding(num_embeddings=self.vocab_size, embedding_dim=d,   \
+                                       padding_idx=padding_idx).to(device)
+        # 使用独立嵌入层
 
         self.decoders = nn.Sequential()   # 容器模块
 
