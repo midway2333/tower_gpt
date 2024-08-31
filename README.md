@@ -29,4 +29,4 @@ galore-torch库<br>
 
 ## 更新
 ### 8.31更新
-上传了[training](https://github.com/midway2333/tower_gpt/blob/main/decoder/training.py)文件，新文件修复了[tfer_dataloader](https://github.com/midway2333/tower_gpt/blob/main/decoder/tfer_dataloader.py)中的问题，同时为训练中添加了梯度裁剪
+上传了[training](https://github.com/midway2333/tower_gpt/blob/main/decoder/training.py)文件，新文件修复了[tfer_dataloader](https://github.com/midway2333/tower_gpt/blob/main/decoder/tfer_dataloader.py)中的问题，同时为训练中添加了梯度裁剪，提高了代码在大数据量下的训练效率
