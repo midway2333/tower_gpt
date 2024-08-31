@@ -24,5 +24,9 @@ galore-torch库<br>
 
 ## 已知问题
 线性层与词向量权重共享不可用，代码以注释形式保留<br>
-[tfer_dataloader](https://github.com/midway2333/tower_gpt/blob/main/decoder/tfer_dataloader.py)可能导致在同一个epoch中重复利用近似文本，部分训练文本无法利用的问题<br>
+~~[tfer_dataloader](https://github.com/midway2333/tower_gpt/blob/main/decoder/tfer_dataloader.py)可能导致在同一个epoch中重复利用近似文本，部分训练文本无法利用的问题~~ 此问题可以通过使用更新的[training](https://github.com/midway2333/tower_gpt/blob/main/decoder/training.py)文件进行训练来避免<br>
 ~~mask无法识别padding并处理~~ 此若知问题已修复
+
+## 更新
+### 8.31更新
+上传了[training](https://github.com/midway2333/tower_gpt/blob/main/decoder/training.py)文件，新文件修复了[tfer_dataloader](https://github.com/midway2333/tower_gpt/blob/main/decoder/tfer_dataloader.py)中的问题，同时为训练中添加了梯度裁剪
