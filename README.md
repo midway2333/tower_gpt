@@ -19,8 +19,8 @@ galore-torch库<br>
 开发时使用的工具文件
 
 ## 使用
-使用[tools](https://github.com/midway2333/tower_gpt/tree/main/tools)中的[txt_to_np](https://github.com/midway2333/tower_gpt/blob/main/tools/txt_to_np.py)文件将要使用的文本转换为numpy格式<br>
-将转换后的文件送入模型训练
+对于[training](https://github.com/midway2333/tower_gpt/blob/main/decoder/training.py)文件：使用[tools](https://github.com/midway2333/tower_gpt/tree/main/tools)中的[txt_to_np](https://github.com/midway2333/tower_gpt/blob/main/tools/txt_to_np.py)文件将要使用的文本转换为numpy格式，将转换后的文件送入模型训练<br>
+对于[talk_training](https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_training.py)文件，直接送入json文件进行训练，无需转换格式
 
 ## 已知问题
 线性层与词向量权重共享不可用，代码以注释形式保留<br>
@@ -30,3 +30,7 @@ galore-torch库<br>
 ## 更新
 ### 8.31更新
 上传了[training](https://github.com/midway2333/tower_gpt/blob/main/decoder/training.py)文件，新文件修复了[tfer_dataloader](https://github.com/midway2333/tower_gpt/blob/main/decoder/tfer_dataloader.py)中的问题，同时为训练中添加了梯度裁剪，提高了代码在大数据量下的训练效率
+### 9.28更新
+上传了[talk_training](https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_training.py)文件，新文件可以进行对话训练<br>
+为[training](https://github.com/midway2333/tower_gpt/blob/main/decoder/training.py)添加了梯度累计与混合精度，[talk_training](https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_training.py)同样具有这些新特性<br>
+删除了过时训练文件
