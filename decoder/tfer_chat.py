@@ -91,7 +91,7 @@ class decoder(nn.Module):
 
 class transformer(nn.Module):   # 模型实现
 
-    def __init__(self, decoder_num=6, head_num=8, d=512, dk=256,   \
+    def __init__(self, decoder_num=12, head_num=12, d=768, dk=256,   \
                   dff=1024, vocab_size=122880, padding_idx=3):
         # 在自带词表中padding_idx=3
 
