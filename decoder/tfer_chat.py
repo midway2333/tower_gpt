@@ -21,7 +21,7 @@ class self_attention(nn.Module):   # 自注意力层
     def attention(self, Q:Tensor, K:Tensor, V:Tensor, mask:Tensor):
 
         output = fc.scaled_dot_product_attention   \
-                (Q, K, V, attn_mask=mask, dropout_p=0.1, is_causal=False)
+                (Q, K, V, attn_mask=mask, dropout_p=0.1 if self.training else 0, is_causal=False)
         
         return output
     
@@ -61,7 +61,7 @@ class decoder(nn.Module):
 
         self.ffn = nn.Sequential(   # 前馈网络
             nn.Linear(d, dff),      # 维度变换
-            nn.ReLU(),              # 激活函数
+            nn.GELU(),              # 激活函数
             nn.Linear(dff, d),      # 维度变换
         )
 
@@ -93,7 +93,7 @@ class transformer(nn.Module):   # 模型实现
 
     def __init__(self, decoder_num=12, head_num=12, d=768, dk=256,   \
                   dff=1024, vocab_size=122880, padding_idx=3):
-        # 在自带词表中padding_idx=3
+        # 在自带词表中padding_id=3
 
         super().__init__()
         self.mask = Tensor()
@@ -103,9 +103,10 @@ class transformer(nn.Module):   # 模型实现
 
         self.d = d
         self.vocab_size = vocab_size
+        self.padding_id = padding_idx
 
         self.embedding = nn.Embedding(num_embeddings=self.vocab_size, embedding_dim=d,   \
-                                       padding_idx=padding_idx).to(device)
+                                       padding_idx=self.padding_id).to(device)
         # 使用独立嵌入层
 
         self.decoders = nn.Sequential()   # 容器模块
@@ -117,13 +118,13 @@ class transformer(nn.Module):   # 模型实现
         self.last_linear = nn.Linear(d, self.vocab_size).to(device)
         # 线性层,将解码器的输出映射到词汇表的大小
 
-        # self.last_linear.weight = self.embedding.weight
+        self.embedding.weight = self.last_linear.weight
         # 共享weight和embedding权重
-        # 有bug,先不用了
 
         self.softmax = nn.Softmax(dim=-1)   # 转换为概率分布
 
-    def get_mask(self, sequence_len):
+    def get_mask(self, sequence_len, data):
+        padding_idx = self.padding_id
 
         if not self.training:
         # 检查模型是否在训练模式
@@ -141,15 +142,23 @@ class transformer(nn.Module):   # 模型实现
         # 判断长度
 
             self.mask = torch.triu(torch.full((sequence_len, sequence_len),  \
-                                    float('-inf')).to(device), diagonal=1)
+                                        float('-inf')).to(device), diagonal=1)
             # 创建上三角掩码,设置掩码遮掩
 
-        return self.mask
+        padding_mask = torch.zeros_like(data, dtype=torch.float)
+        padding_mask[data == padding_idx] = float('-inf')
+        padding_mask = padding_mask.unsqueeze(1).expand(-1, data.size(1), -1)
+        # 创建一个与data形状相同的全零矩阵
+        # 把padding位置设置为-inf
+        # 扩展padding_mask维度
+
+        atta_mask = self.mask + padding_mask
+        return atta_mask
         # 返回掩码
 
-    def rope_encode(self, x:int):   # RoPE位置编码
+    def rope_encode(self, len:int):   # RoPE位置编码
 
-        seq_len = x   # 获得输入序列长度
+        seq_len = len   # 获得输入序列长度
 
         pos = torch.arange(seq_len, dtype=torch.float).to(device)
         # 创建位置索引
@@ -174,13 +183,16 @@ class transformer(nn.Module):   # 模型实现
         sequence_len = x.shape[1]
         # 获取输入张量x的第二个维度的大小
 
-        x = self.embedding(x)   # 使用嵌入层
+        ebd_x = self.embedding(x)   # 使用嵌入层
  
-        x = x * self.d**0.5 + self.rope_encode(sequence_len)   # type: ignore
+        output_x = ebd_x * self.d**0.5 + self.rope_encode(sequence_len)   # type: ignore
         # 将嵌入向量乘以嵌入维度的平方根(防止嵌入值过大)
         # 添加位置编码
 
-        y, _ = self.decoders((x, self.get_mask(sequence_len)))
+        atta_mask = self.get_mask(sequence_len=sequence_len, data=x)
+        # 创造掩码
+
+        y, _ = self.decoders((output_x, atta_mask))
         # 将带有位置编码的嵌入向量和掩码传递给解码器
         # 解码器返回的y是每个位置的输出向量
         # 将解码器的输出赋值给y,并且忽略注意力权重
