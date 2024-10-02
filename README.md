@@ -38,4 +38,5 @@ galore-torch库<br>
 对[模型文件](https://github.com/midway2333/tower_gpt/blob/main/decoder/tfer_chat.py)部分更改/优化<br>
 修复线性层与词向量权重共享不可用的问题<br>
 完善padding处理机制<br>
+更换激活函数<br>
 上传了新的工具文件
