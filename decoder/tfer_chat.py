@@ -24,7 +24,7 @@ class self_attention(nn.Module):   # 自注意力层
                 (Q, K, V, attn_mask=mask, dropout_p=0.1 if self.training else 0, is_causal=False)
         
         return output
-    
+
         # Q是查询向量,K是键向量;将K的转置与Q相乘,得到一个矩阵
         # 矩阵中每个元素表示查询向量和对应键向量之间的相似度
         # self.dk**0.5起到调节作用,使得内积不至于太大
@@ -196,7 +196,7 @@ class transformer(nn.Module):   # 模型实现
         # 将带有位置编码的嵌入向量和掩码传递给解码器
         # 解码器返回的y是每个位置的输出向量
         # 将解码器的输出赋值给y,并且忽略注意力权重
-        # 忽略注意力权重是因为这里只想生成文本,而不需要解释模型的行为
+        # 忽略注意力掩码,毕竟任务是文本生成
 
         y = self.last_linear(y)
         # 将解码器的输出通过最后的线性层,得到每个位置的词汇表分布
