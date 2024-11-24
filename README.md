@@ -40,3 +40,7 @@ galore-torch库<br>
 完善padding处理机制<br>
 更换激活函数<br>
 上传了新的工具文件
+### 11.24更新
+上传了[training](https://github.com/midway2333/tower_gpt/blob/main/decoder/training.py)文件，此文件为实验性长文本训练文件，使用方法同[talk_training](https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_training.py)<br>
+优点是可以直接使用json训练，可以记录训练日志<br>
+缺点是dataset对ram需求更大，dataset效率更低<br>
