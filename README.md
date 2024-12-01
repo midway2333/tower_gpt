@@ -28,7 +28,7 @@ galore-torch库<br>
 |emoji|不支持|支持|支持|
 
 在其它条件相同时使用不同分词器的训练损失：<br>
-![spm_dict](https://github.com/midway2333/tower_gpt/blob/main/png_box/v1.png)<br>
+![spm_dict](https://github.com/midway2333/tower_gpt/blob/main/png_box/v1.png)
 ![spm_dict_v2](https://github.com/midway2333/tower_gpt/blob/main/png_box/v2.png)<br>
 
 相较于spm_dict，v2/v2.1的训练语料更加分散<br>
