@@ -27,7 +27,7 @@ galore-torch库<br>
 |词表大小|78336|78336|78336|
 |emoji|不支持|支持|支持|
 
-在其它条件相同时使用不同分词器的训练损失：<br>
+在其它条件相同时使用不同分词器的训练损失：(左为spm_dict，右为spm_dict_v2)<br>
 ![spm_dict](https://github.com/midway2333/tower_gpt/blob/main/png_box/v1.png)
 ![spm_dict_v2](https://github.com/midway2333/tower_gpt/blob/main/png_box/v2.png)<br>
 
