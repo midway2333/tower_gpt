@@ -27,6 +27,10 @@ galore-torch库<br>
 |词表大小|78336|78336|78336|
 |emoji|不支持|支持|支持|
 
+在其它条件相同时使用不同分词器的训练损失：<br>
+[spm_dict](https://github.com/midway2333/tower_gpt/blob/main/png_box/v1.png)<br>
+[spm_dict_v2](https://github.com/midway2333/tower_gpt/blob/main/png_box/v2.png)<br>
+
 相较于spm_dict，v2/v2.1的训练语料更加分散<br>
 但貌似spm_dict的分词效果更好
 
@@ -39,7 +43,7 @@ galore-torch库<br>
 送入json文件进行训练
 
 ## 已知问题
-<details open> 
+<details close> 
 <summary>  <b>已修复</b> </summary>
 线性层与词向量权重共享不可用，代码以注释形式保留<br>
 <a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/tfer_dataloader.py">tfer_dataloader</a>可能导致在同一个epoch中重复利用近似文本，部分训练文本无法利用的问题 此问题可以通过使用更新的<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/training.py">training</a>文件进行训练来避免<br>
@@ -53,19 +57,19 @@ mask无法识别padding并处理<br/>
 
 ## 更新
 
-<details open> 
+<details close> 
 <summary>  <b>8.31更新</b> </summary>
 - 上传了<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/training.py">training</a>文件，新文件修复了<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/tfer_dataloader.py">tfer_dataloader</a>中的问题，同时为训练中添加了梯度裁剪，提高了代码在大数据量下的训练效率<br/>
 </details>
 
-<details open> 
+<details close> 
 <summary>  <b>9.28更新</b> </summary>
 - 上传了<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_training.py">talk_training</a>文件，新文件可以进行对话训练<br>
 - 为<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/training.py">training</a>添加了梯度累计与混合精度，<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_training.py">talk_training</a>同样具有这些新特性<br>
 - 删除了过时训练文件<br/>
 </details>
 
-<details open> 
+<details close> 
 <summary>  <b>10.2更新</b> </summary>
 - 对<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/tfer_chat.py">模型文件</a>部分更改/优化<br>
 - 修复线性层与词向量权重共享不可用的问题<br>
@@ -74,7 +78,7 @@ mask无法识别padding并处理<br/>
 - 上传了新的工具文件<br/>
 </details>
 
-<details open> 
+<details close> 
 <summary>  <b>11.24更新</b> </summary>
 - 上传了更新的<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/training.py">training</a>文件，此文件为实验性长文本训练文件<br>
 - 优点是可以直接使用json训练，可以记录训练日志<br>
