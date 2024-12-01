@@ -159,11 +159,12 @@ def train(epoch: int, dataloader: DataLoader, model: nn.Module,   \
         train_steps += 1
         writer.add_scalar(wr_name, avg_epoch_loss, train_steps)   # 记录训练损失
 
-def check_point_train(log_file, block_size, batch_size, epoch, rating, step, writer, name, enable=True):
+def train_log(model_name, log_file, block_size, batch_size, epoch,   \
+                       rating, step, writer, name):
 
     """
-    
-    - enable: 是否使用
+
+    - model_name: 模型名
     - log_file: 记录文件的路径
     - block_size: 窗口大小
     - batch_size: batch大小
@@ -175,65 +176,57 @@ def check_point_train(log_file, block_size, batch_size, epoch, rating, step, wri
 
     """
 
-    if enable == True:
-        try:
-            # 创建一个新的记录条目
-            log_entry = {
-                "time": datetime.now().isoformat(),
-                "block_size": block_size,
-                "batch_size": batch_size,
-                "epoch": epoch,
-                "learning_rate": rating,
-                "step": step,
-                "writer": writer,
-                "name": name
-            }
+    # 创建一个新的记录条目
+    log_entry = {
+        "time": datetime.now().isoformat(),
+        "model": model_name,
+        "block_size": block_size,
+        "batch_size": batch_size,
+        "epoch": epoch,
+        "learning_rate": rating,
+        "step": step,
+        "writer": writer,
+        "name": name
+    }
 
+    logs = []   # 读取现有的日志文件内容
+    try:
+        with open(log_file, 'r') as file:
+            logs = json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass  # 如果文件不存在或为空,则创建一个空列表
 
-            logs = []   # 读取现有的日志文件内容
-            try:
-                with open(log_file, 'r') as file:
-                    logs = json.load(file)
-            except (FileNotFoundError, json.JSONDecodeError):
-                pass  # 如果文件不存在或为空,则创建一个空列表
-
-            if logs:
-                last_entry = logs[-1]
-                previous_epoch_sum = last_entry.get("epoch", 0)
-                log_entry["epoch"] = last_entry.get("epoch", 0) + epoch
-            else:
-                log_entry["epoch"] = epoch
-                previous_epoch_sum = 0
-            # 获取最新的记录以累加epoch
-
-            logs.append(log_entry)
-            # 追加新的记录
-
-            with open(log_file, 'w') as file:
-                json.dump(logs, file, indent=4)
-            # 将更新后的日志列表写回文件
-
-            return previous_epoch_sum
-            # 返回当前轮次开始时的epoch轮次
-
-        except IOError as e:
-            print(f"Error writing to log file: {e}")
-
-            return None
-        
+    if logs:
+        last_entry = logs[-1]
+        previous_epoch_sum = last_entry.get("epoch", 0)
+        log_entry["epoch"] = last_entry.get("epoch", 0) + epoch
     else:
-        pass
+        log_entry["epoch"] = epoch
+        previous_epoch_sum = 0
+    # 获取最新的记录以累加epoch
+
+    logs.append(log_entry)
+    # 追加新的记录
+
+    with open(log_file, 'w') as file:
+        json.dump(logs, file, indent=4)
+    # 将更新后的日志列表写回文件
+
+    return previous_epoch_sum
+    # 返回当前轮次开始时的epoch轮次
+    # 用于记录上一次断点
+
 
 if __name__ == '__main__':
 
     file_path = 'bookdata.json'
-    sp_path = 'work\\tokenizer\\spm_dict.model'
+    sp_path = 'work\\tokenizer\\spm_dict_v2.model'
     block_size = 128
     batch_size = 12
     # dataset/dataloader设置
 
     sp = spm.SentencePieceProcessor()
-    sp.load('work\\tokenizer\\spm_dict.model')   # type: ignore
+    sp.load(sp_path)   # type: ignore
     vocab_size = sp.GetPieceSize()
     padding_id = sp.pad_id()
     # 构建词表
@@ -242,15 +235,25 @@ if __name__ == '__main__':
     # 设备获取
 
     model = transformer(vocab_size=vocab_size, padding_idx=padding_id)
-    # model.load_state_dict(torch.load('test_tower_alpha.bin', weights_only=True))
     # 模型设置
 
-    epoch = 5
+    epoch = 30
     rating = 0.0001
     step = 32
-    writer = SummaryWriter('tr_logs')
-    name = 'test_tower_long_1'
+    writer_file = 'tr_logs'
+    writer = SummaryWriter(writer_file)
+    name = 'test_tower_long_2'
     # 训练设置
+
+    model_name = 'test_tower_alpha_re.bin'
+    log_file = 'tower_train_re'
+    ep = train_log(model_name, log_file, block_size, batch_size, epoch,   \
+                       rating, step, writer_file, name)
+    # 信息设置
+
+    if ep != 0:
+        model.load_state_dict(torch.load(model_name, weights_only=True))
+    # 断点续训
 
     data_processor = DialogueDataProcessor(file_path, sp_path, block_size)
     dataset = DialogueDataset(data_processor)
@@ -260,6 +263,6 @@ if __name__ == '__main__':
     # dataset @ dataloader
     
     train(epoch=epoch, dataloader=dataloader, model=model,   \
-            device=device, writer=writer, rating=rating, wr_name=name, steps=step)
+            device=device, writer=writer, rating=rating, wr_name=name, steps=step, train_steps=ep)
 
-    torch.save(model.state_dict(), 'test_tower_alpha.bin')
+    torch.save(model.state_dict(), model_name)
