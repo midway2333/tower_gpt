@@ -10,6 +10,13 @@ from datetime import datetime
 from typing import Optional
 from dataset import *
 
+"""
+
+使用生成器加载数据集
+适用于大数据集下的训练
+防止内存溢出
+
+"""
 
 def train(
     epoch: int,
@@ -47,7 +54,7 @@ def train(
     - steps: 梯度累积步进
     - log_file: log文件
     - block_size: 窗口大小(用于log)
-    - batch_size: 批次大小(用于log)
+    - batch_size: 批次大小(用于log与loss计算)
     - train_steps: 断点续训轮数
     - test_set: 是否运用测试集
     - test_dataloader: 测试数据加载器
@@ -98,7 +105,7 @@ def train(
 
             epoch_loss += loss.item()    # 累加batch损失
 
-        avg_epoch_loss = (epoch_loss / len(dataloader)) * accumulation_steps
+        avg_epoch_loss = (epoch_loss / (data_processor.length // batch_size)) * accumulation_steps
         # 计算平均epoch损失
 
         if test_set and test_dataloader is not None:
@@ -231,41 +238,15 @@ def get_previous_epoch(log_file):
         pass  # 如果文件不存在或为空,则返回0
     return 0
 
-def is_finetune(model: nn.Module, model_name: str):
-
-    """
-
-    微调判定
-    另一个生成器的train就不写这个了
-    应该没人用那么大的数据集微调
-
-    绝对不是我懒(划掉)
-
-    参数:
-    - model (nn.Module): 要微调的模型
-    - model_name (str): 预训练模型的文件名
-
-    """
-
-    model.load_state_dict(torch.load(model_name, weights_only=True))
-    # 加载预训练模型的权重
-
-    layers_freeze = [model.embedding]
-    # 指定embedding层参数
-
-    for layer in layers_freeze:
-        for param in layer.parameters():
-            param.requires_grad = False
-    # 冻结参数
 
 if __name__ == '__main__':
 
-    file_path = 'data\\bookdata.json'
+    file_path = ''
     block_size = 128
     batch_size = 12
     # 训练集设置
 
-    test_file_path = 'data\\test.json'
+    test_file_path = ''
     test_block_size = 128
     test_batch_size = 12
     # 测试集设置
@@ -283,17 +264,16 @@ if __name__ == '__main__':
     model = transformer(vocab_size=vocab_size, padding_idx=padding_id)
     # 模型设置
 
-    epoch = 10
-    rating = 0.00015
+    epoch = 20
+    rating = 0.0003
     step = 32
     writer_file = 'tr_logs'
     writer = SummaryWriter(writer_file)
-    name = 'tower_alpha_book_train'
-    fin_tuning = True   # 是否微调
+    name = ''
     # 训练设置
 
-    model_name = 'tower_alpha.bin'
-    log_file = 'tower_alpha_test.log'
+    model_name = ''
+    log_file = ''
     ep = get_previous_epoch(log_file)
     # 信息设置
 
@@ -301,16 +281,13 @@ if __name__ == '__main__':
         model.load_state_dict(torch.load(model_name, weights_only=True))
     # 断点续训
 
-    if fin_tuning:
-        is_finetune(model, model_name)
-    # 微调
-
     data_processor = DialogueDataProcessor(file_path, sp_path, block_size)
-    dataset = DialogueDataset(data_processor)
+    dataset = GeneratorDialogueDataset(data_processor)
 
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False,   \
-                                num_workers=12, pin_memory=True)
+                                num_workers=0, pin_memory=True)
     # 训练集 dataset @ dataloader
+    # 生成器加载 num_workers 只能为0
 
     test_data_processor = DialogueDataProcessor(test_file_path, sp_path, test_block_size)
     test_dataset = DialogueDataset(test_data_processor)
@@ -337,4 +314,4 @@ if __name__ == '__main__':
         test_dataloader=test_dataloader
     )
 
-    torch.save(model.state_dict(), model_name+'_test')
+    torch.save(model.state_dict(), model_name)

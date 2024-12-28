@@ -93,6 +93,19 @@ class transformer(nn.Module):   # 模型实现
 
     def __init__(self, decoder_num=12, head_num=12, d=768, dk=256,   \
                   dff=1024, vocab_size=122880, padding_idx=3):
+
+        """   
+        
+        - decoder_num: 解码器的数量
+        - head_num: 注意力头的数量
+        - d: 输入/输出的维度
+        - dk: 每个头的维度
+        - dff: 前馈网络内部层的维度
+        - vocab_size: 词汇表的大小
+        - padding_idx: 填充的索引
+        
+        """
+
         # 在自带词表中padding_id=3
 
         super().__init__()
