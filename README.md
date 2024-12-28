@@ -40,7 +40,10 @@ galore-torch库<br>
 ## 使用
 [train](https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py)文件用于训练长文本<br>
 [talk_train](https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_train.py)文件用于训练对话文本<br>
-送入json文件进行训练
+送入json文件进行训练<br>
+
+<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/generator_train.py">generator_train</a>文件用于大数据集训练(1GB以上)<br>
+送入jsonl文件进行训练<br>
 
 ## 已知问题
 <details close> 
@@ -48,12 +51,19 @@ galore-torch库<br>
 - 线性层与词向量权重共享不可用，代码以注释形式保留<br>
 - <a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/tfer_dataloader.py">tfer_dataloader</a>可能导致在同一个epoch中重复利用近似文本，部分训练文本无法利用的问题<br>
 - mask无法识别padding并处理<br>
-- <a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py">train</a>与<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_train.py">talk_train</a>缺失梯度清除<br/>
+-<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py">train</a>与<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_train.py">talk_train</a>缺失梯度清除<br/>
 </details>
 
 <details open> 
 <summary>  <b>尚存在</b> </summary>
-- 两份推理文件过于老旧，无法正常运行新训练的模型<br/>
+- 断点续训会在开始时出现loss增加的情况<br>
+<img src="https://github.com/midway2333/tower_gpt/blob/main/png_box/damn.png" alt="damn"><br/>
+</details>
+
+<details open> 
+<summary>  <b>其他</b> </summary>
+- 对话的大数据集训练与微调代码缺失<br>
+- 推理代码随机性控制不足(只有温度采样)<br/>
 </details>
 
 ## 更新
@@ -94,11 +104,20 @@ galore-torch库<br>
 - 增加了新的工具文件<br/>
 </details>
 
-<details open> 
+<details close> 
 <summary>  <b>12.15更新</b> </summary>
 - 对部分文件的重命名<br>
 - 为<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py">train</a>添加了测试集支持<br>
 - 修复了<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py">train</a>与<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_train.py">talk_train</a>缺失梯度清除的问题<br>
 - <del>我个若知居然4个月没发现这个问题</del> <br>
 - 对<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py">train</a>与<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_train.py">talk_train</a>的代码优化
+</details>
+
+<details open> 
+<summary>  <b>12.28更新</b> </summary>
+- 拆分<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py">train</a>为<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py">train</a>与<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/dataset.py">dataset</a>，使代码结构更清晰<br>
+- 添加了使用生成器的<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/generator_train.py">generator_train</a>，适用于大数据集的训练，防止内存泄漏<br>
+- 为<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py">train</a>添加了微调支持<br>
+- 优化了<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py">train</a>的log与断点续训<br>
+- 代码注释优化<br/>
 </details>
