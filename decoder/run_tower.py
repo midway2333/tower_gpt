@@ -1,17 +1,19 @@
 import torch
-from decoder.model import *
+from model import *
 import sentencepiece as spm
 
 sp = spm.SentencePieceProcessor()
-sp.load('work\\tokenizer\\spm_dict.model')   # type: ignore
+sp.load('work\\tokenizer\\spm_dict_v2.1.model')   # type: ignore
 vocab_size = sp.GetPieceSize()
 # 构建词表
 
+bos_id = sp.bos_id()
+eos_id = sp.eos_id()
 
 model = transformer(vocab_size=vocab_size)
 # 加载模型
 
-model.load_state_dict(torch.load('test_tower_alpha', weights_only=True))
+model.load_state_dict(torch.load('tower_alpha.bin', weights_only=True))
 
 model.eval()
 
@@ -32,9 +34,9 @@ def sample_next_token_with_temperature(probabilities, temperature=0.7):
     # 按概率大小采样
 
 
-def run_model(temperature=0.7):
+def run_model(temperature=0.7, max_token=50):
 
-    print('model download successfully')
+    print('model load successfully')
 
     while True:
 
@@ -43,7 +45,7 @@ def run_model(temperature=0.7):
 
         tokens = sp.encode(user_input)   # 编码   # type: ignore
 
-        while cnt <= 50:
+        while cnt <= max_token:
 
             x = torch.tensor(tokens)   # 将tokens列表转换为张量
             x = x.unsqueeze(0)         # 在第零维增加batch_size大小
@@ -62,7 +64,6 @@ def run_model(temperature=0.7):
             pred = sample_next_token_with_temperature(probabilities.squeeze(0), temperature)
             # 移除批次维度,温度参数控制采样过程的随机性
 
-
             tokens.append(int(pred))   # 将预测的token添加到序列中
 
             word = sp.decode([pred])   # 预测的token解码为字词   # type: ignore
@@ -72,5 +73,7 @@ def run_model(temperature=0.7):
             if cnt % 20 == 0:   # 打印换行符
                 print('')       # 方便阅读
 
+            if pred == eos_id:   # 结束行停止
+                break
 
 run_model()

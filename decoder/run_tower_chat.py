@@ -41,7 +41,7 @@ def run_model(temperature=0.3):
     bot_token = sp.encode('__BOT__')[1]   # type: ignore
     # 获取'__USER__'的token编码
 
-    print('model download successfully')
+    print('model load successfully')
 
     while True:
 
