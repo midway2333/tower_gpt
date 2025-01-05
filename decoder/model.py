@@ -21,7 +21,7 @@ class self_attention(nn.Module):   # 自注意力层
     def attention(self, Q:Tensor, K:Tensor, V:Tensor, mask:Tensor):
 
         output = fc.scaled_dot_product_attention   \
-                (Q, K, V, attn_mask=mask, dropout_p=0.1 if self.training else 0, is_causal=False)
+                (Q, K, V, attn_mask=mask, dropout_p=0.05 if self.training else 0, is_causal=False)
         
         return output
 
@@ -67,35 +67,35 @@ class decoder(nn.Module):
 
         self.norm2 = nn.LayerNorm(d)   # 前馈网络输出层归一化
 
-    def forward(self, x:tuple):
-        x, mask = x   # x为需要处理的数据
-        heads_res = []   # 创建了一个空列表,用于存储每个注意力头的输出
-        for head in self.heads:   # 可以并行
-            heads_res.append(head((x, mask)))
-            # 遍历self.heads列表中的每个注意力头
-            # 并将每个头的输出添加到heads_res列表中
+    def forward(self, inputs: tuple):
 
-        a = self.o(torch.concat(heads_res, dim = -1))
+        x, mask = inputs  # x为需要处理的数据
+
+        norm_x = self.norm1(x)   # 层归一化
+        heads_outputs = [head((norm_x, mask)) for head in self.heads]
+        # 运用多头注意力机制
+
+        multi_head_output = self.o(torch.concat(heads_outputs, dim=-1))
         # 将heads_res列表中的所有输出沿最后一个维度(dim=-1)连接起来
         # 然后将多头注意力机制的输出合并成一个单一的输出
-        # a:多头注意力机制的输出
 
-        b = self.norm1(a+x)   # 残差连接,归一化
-        # 残差连接主要用于解决梯度消失和梯度爆炸问题,从而提高网络的训练效率和性能
-        # 标准表示:y=f(x)+x
+        residual_and_norm = multi_head_output + x
+        norm_residual = self.norm2(residual_and_norm)
+        final_output = self.ffn(norm_residual) + residual_and_norm
+        # 再次应用层归一化，然后通过前馈神经网络
+        # 使用的是Pre_layer_normalization
 
-        y = self.norm2(self.ffn(b)+b)   # 前馈网络,残差连接,归一化
-
-        return (y, mask)
+        return (final_output, mask)
 
 
 class transformer(nn.Module):   # 模型实现
 
-    def __init__(self, decoder_num=12, head_num=12, d=768, dk=256,   \
-                  dff=1024, vocab_size=122880, padding_idx=3):
+    def __init__(self, decoder_num=12, head_num=12, d=768, dk=64,   \
+                  dff=1024, vocab_size=78336, padding_idx=3):
 
         """   
-        
+
+        参数:
         - decoder_num: 解码器的数量
         - head_num: 注意力头的数量
         - d: 输入/输出的维度
@@ -103,7 +103,7 @@ class transformer(nn.Module):   # 模型实现
         - dff: 前馈网络内部层的维度
         - vocab_size: 词汇表的大小
         - padding_idx: 填充的索引
-        
+
         """
 
         # 在自带词表中padding_id=3

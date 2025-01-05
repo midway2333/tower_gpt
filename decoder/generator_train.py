@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 from datetime import datetime
 from typing import Optional
 from dataset import *
+import os
 
 """
 
@@ -67,6 +68,10 @@ def train(
     optimizer = GaLoreAdamW8bit(model.parameters(), lr=rating,   \
                     betas=(0.9, 0.999), eps=1e-8, weight_decay=0.01)
     # 优化器
+
+    if train_steps != 0:
+        optimizer.load_state_dict(torch.load(model_name+'_optimizer.pth', weights_only=True))
+    # 断点续训加载优化器
 
     train_steps = train_steps   # 初始化训练步数
 
@@ -130,7 +135,10 @@ def train(
 
             if (i + 1) % 10 == 0:   # 拥有测试集时打印对应loss
                 print(f'Epoch: {i + 1}; avg_Loss: {avg_epoch_loss}; avg_test_Loss: {avg_test_loss}')
-                torch.save(model.state_dict(), model_name)   # 续存模型
+                torch.save(model.state_dict(), model_name)             # 续存模型
+                opt_dict = optimizer.state_dict()                      # 续存优化器
+                torch.save(opt_dict, model_name+'_optimizer.pth')      # 保存参数
+
                 train_log(
                     model_name=model_name,
                     log_file=log_file,
@@ -149,7 +157,9 @@ def train(
         else:
             if (i + 1) % 10 == 0:   # 没有测试集时打印对应loss
                 print(f'Epoch: {i + 1}; avg_Loss: {avg_epoch_loss}')
-                torch.save(model.state_dict(), model_name)   # 续存模型
+                torch.save(model.state_dict(), model_name)             # 续存模型
+                opt_dict = optimizer.state_dict()                      # 续存优化器
+                torch.save(opt_dict, model_name+'_optimizer.pth')      # 保存参数
 
                 train_log(
                     model_name=model_name,
@@ -165,6 +175,10 @@ def train(
 
 
         writer.add_scalar(wr_name, avg_epoch_loss, train_steps)   # 记录训练损失
+
+    torch.save(model.state_dict(), model_name)             # 保存模型
+    opt_dict = optimizer.state_dict()                      # 续存优化器
+    torch.save(opt_dict, model_name+'_optimizer.pth')      # 保存参数
 
 def train_log(model_name, log_file, block_size, batch_size, epoch,   \
                        rating, step, writer, tb_name):
@@ -241,12 +255,12 @@ def get_previous_epoch(log_file):
 
 if __name__ == '__main__':
 
-    file_path = ''
+    file_path = 'data\\train\\train (16).jsonl'
     block_size = 128
     batch_size = 12
     # 训练集设置
 
-    test_file_path = ''
+    test_file_path = 'data\\test.json'
     test_block_size = 128
     test_batch_size = 12
     # 测试集设置
@@ -269,11 +283,11 @@ if __name__ == '__main__':
     step = 32
     writer_file = 'tr_logs'
     writer = SummaryWriter(writer_file)
-    name = ''
+    wr_name = 'opztest_pre'
     # 训练设置
 
-    model_name = ''
-    log_file = ''
+    model_name = 'opztest.bin'
+    log_file = 'opztest.log'
     ep = get_previous_epoch(log_file)
     # 信息设置
 
@@ -304,7 +318,7 @@ if __name__ == '__main__':
         writer=writer,
         rating=rating,
         tb_name=writer_file,
-        wr_name=name,
+        wr_name=wr_name,
         steps=step,
         log_file=log_file,
         block_size=block_size,
@@ -313,5 +327,3 @@ if __name__ == '__main__':
         test_set=True,
         test_dataloader=test_dataloader
     )
-
-    torch.save(model.state_dict(), model_name)

@@ -61,6 +61,10 @@ def train(
                     betas=(0.9, 0.999), eps=1e-8, weight_decay=0.01)
     # 优化器
 
+    if train_steps != 0:
+        optimizer.load_state_dict(torch.load(model_name+'_optimizer.pth', weights_only=True))
+    # 断点续训加载优化器
+
     train_steps = train_steps   # 初始化训练步数
 
     for i in range(epoch):
@@ -124,6 +128,9 @@ def train(
             if (i + 1) % 10 == 0:   # 拥有测试集时打印对应loss
                 print(f'Epoch: {i + 1}; avg_Loss: {avg_epoch_loss}; avg_test_Loss: {avg_test_loss}')
                 torch.save(model.state_dict(), model_name)   # 续存模型
+                opt_dict = optimizer.state_dict()                      # 续存优化器
+                torch.save(opt_dict, model_name+'_optimizer.pth')      # 保存参数
+
                 train_log(
                     model_name=model_name,
                     log_file=log_file,
@@ -139,10 +146,13 @@ def train(
             writer.add_scalar(wr_name+'_test', avg_test_loss, train_steps)   # 记录测试损失
 
 
+
         else:
             if (i + 1) % 10 == 0:   # 没有测试集时打印对应loss
                 print(f'Epoch: {i + 1}; avg_Loss: {avg_epoch_loss}')
                 torch.save(model.state_dict(), model_name)   # 续存模型
+                opt_dict = optimizer.state_dict()                      # 续存优化器
+                torch.save(opt_dict, model_name+'_optimizer.pth')      # 保存参数
 
                 train_log(
                     model_name=model_name,
@@ -158,6 +168,10 @@ def train(
 
 
         writer.add_scalar(wr_name, avg_epoch_loss, train_steps)   # 记录训练损失
+
+    torch.save(model.state_dict(), model_name)             # 保存模型
+    opt_dict = optimizer.state_dict()                      # 续存优化器
+    torch.save(opt_dict, model_name+'_optimizer.pth')      # 保存参数
 
 def train_log(model_name, log_file, block_size, batch_size, epoch,   \
                        rating, step, writer, tb_name):
@@ -283,17 +297,17 @@ if __name__ == '__main__':
     model = transformer(vocab_size=vocab_size, padding_idx=padding_id)
     # 模型设置
 
-    epoch = 10
+    epoch = 100
     rating = 0.00015
     step = 32
     writer_file = 'tr_logs'
     writer = SummaryWriter(writer_file)
     name = 'tower_alpha_book_train'
-    fin_tuning = True   # 是否微调
+    fin_tuning = False   # 是否微调
     # 训练设置
 
     model_name = 'tower_alpha.bin'
-    log_file = 'tower_alpha_test.log'
+    log_file = 'tower_alpha.log'
     ep = get_previous_epoch(log_file)
     # 信息设置
 
@@ -337,4 +351,5 @@ if __name__ == '__main__':
         test_dataloader=test_dataloader
     )
 
-    torch.save(model.state_dict(), model_name+'_test')
+
+
