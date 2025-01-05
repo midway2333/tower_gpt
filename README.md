@@ -51,18 +51,18 @@ galore-torch库<br>
 - 线性层与词向量权重共享不可用，代码以注释形式保留<br>
 - <a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/tfer_dataloader.py">tfer_dataloader</a>可能导致在同一个epoch中重复利用近似文本，部分训练文本无法利用的问题<br>
 - mask无法识别padding并处理<br>
--<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py">train</a>与<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_train.py">talk_train</a>缺失梯度清除<br/>
+-<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py">train</a>与<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_train.py">talk_train</a>缺失梯度清除<br>
+- 断点续训会在开始时出现loss增加的情况<br/>
 </details>
 
 <details open> 
 <summary>  <b>尚存在</b> </summary>
-- 断点续训会在开始时出现loss增加的情况<br>
-<img src="https://github.com/midway2333/tower_gpt/blob/main/png_box/damn.png" alt="damn"><br/>
+- 此版本所有问题均已修复(`・ω・´)<br/>
 </details>
 
 <details open> 
 <summary>  <b>其他</b> </summary>
-- 对话的大数据集训练与微调代码缺失<br>
+- 对话的大数据集训练与微调代码缺失，<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_train.py">talk_train</a>许久未更新<br>
 - 推理代码随机性控制不足(只有温度采样)<br/>
 </details>
 
@@ -113,11 +113,19 @@ galore-torch库<br>
 - 对<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py">train</a>与<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_train.py">talk_train</a>的代码优化
 </details>
 
-<details open> 
+<details close> 
 <summary>  <b>12.28更新</b> </summary>
 - 拆分<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py">train</a>为<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py">train</a>与<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/dataset.py">dataset</a>，使代码结构更清晰<br>
 - 添加了使用生成器的<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/generator_train.py">generator_train</a>，适用于大数据集的训练，防止内存泄漏<br>
 - 为<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py">train</a>添加了微调支持<br>
 - 优化了<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py">train</a>的log与断点续训<br>
+- 代码注释优化<br/>
+</details>
+
+<details open> 
+<summary>  <b>25.1.5更新</b> </summary>
+- 为<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py">train</a>与<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/generator_train.py">generator_train</a>添加优化器续存支持(修复断点续训会在开始时出现loss增加的情况)<br>
+- 修改<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/model.py">模型文件</a>的Post layer normalization为Pre layer normalization<br>
+- 修改了模型预设参数<br>
 - 代码注释优化<br/>
 </details>
