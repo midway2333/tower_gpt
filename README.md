@@ -11,8 +11,8 @@ torch2.0或更高<br>
 sentencepiece库<br>
 galore-torch库<br>
 
-推荐使用python3.11
-
+推荐使用python3.11<br>
+或者使用[subsoil](https://github.com/midway2333/subsoil)快速设置开发环境
 ## 代码
 ### decoder
 包含了模型、训练、运行的代码
@@ -40,10 +40,10 @@ galore-torch库<br>
 ## 使用
 [train](https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py)文件用于训练长文本<br>
 [talk_train](https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_train.py)文件用于训练对话文本<br>
-送入json文件进行训练<br>
-
-<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/generator_train.py">generator_train</a>文件用于大数据集训练(1GB以上)<br>
 送入jsonl文件进行训练<br>
+
+~~<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/generator_train.py">generator_train</a>文件用于大数据集训练(1GB以上)~~ 已弃用<br>
+~~送入jsonl文件进行训练~~<br>
 
 ## 已知问题
 <details close> 
@@ -52,7 +52,8 @@ galore-torch库<br>
 - <a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/tfer_dataloader.py">tfer_dataloader</a>可能导致在同一个epoch中重复利用近似文本，部分训练文本无法利用的问题<br>
 - mask无法识别padding并处理<br>
 -<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py">train</a>与<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_train.py">talk_train</a>缺失梯度清除<br>
-- 断点续训会在开始时出现loss增加的情况<br/>
+- 断点续训会在开始时出现loss增加的情况<br>
+- <a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/dataset.py">dataset</a>在加载器下无法遍历完整数据的问题<br/>
 </details>
 
 <details open> 
@@ -62,7 +63,6 @@ galore-torch库<br>
 
 <details open> 
 <summary>  <b>其他</b> </summary>
-- 对话的大数据集训练与微调代码缺失，<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_train.py">talk_train</a>许久未更新<br>
 - 推理代码随机性控制不足(只有温度采样)<br/>
 </details>
 
@@ -122,10 +122,22 @@ galore-torch库<br>
 - 代码注释优化<br/>
 </details>
 
-<details open> 
+<details close> 
 <summary>  <b>25.1.5更新</b> </summary>
 - 为<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py">train</a>与<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/generator_train.py">generator_train</a>添加优化器续存支持(修复断点续训会在开始时出现loss增加的情况)<br>
 - 修改<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/model.py">模型文件</a>的Post layer normalization为Pre layer normalization<br>
 - 修改了模型预设参数<br>
 - 代码注释优化<br/>
 </details>
+
+<details open> 
+<summary>  <b>25.3.2更新</b> </summary>
+- 重构<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/train.py">train</a>与<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_train.py">talk_train</a>代码文件，增加了一些新功能<br>
+- 修复<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/dataset.py">dataset</a>在加载器下无法遍历完整数据的问题<br>
+- <a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/dataset.py">dataset</a>添加对</a>与<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_train.py">talk_train</a>的数据加载支持<br>
+- 新添<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/dpo_train.py">dpo_train</a>与<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/dpo_dataset.py">dpo_dataset</a>，旨在支持dpo训练<br>
+- 工具文件结构优化<br>
+</details>
+
+## 有关问题
+本项目虽然已经经过了一段时间的发展，但规范性与实用性依然无法看齐业界内的其它项目；如果您发现了任何新的问题或有关本项目的优化，欢迎在本项目的[issues](https://github.com/midway2333/tower_gpt/issues)中提出
