@@ -42,8 +42,9 @@ galore-torch库<br>
 [talk_train](https://github.com/midway2333/tower_gpt/blob/main/decoder/talk_train.py)文件用于训练对话文本<br>
 送入jsonl文件进行训练<br>
 
-~~<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/generator_train.py">generator_train</a>文件用于大数据集训练(1GB以上)~~ 已弃用<br>
+~~<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/generator_train.py">generator_train</a>文件用于大数据集训练(1GB以上)~~<br>
 ~~送入jsonl文件进行训练~~<br>
+已弃用
 
 ## 已知问题
 <details close> 
