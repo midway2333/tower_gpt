@@ -183,8 +183,7 @@ class train():
                         self.train_steps, self.all_tsp
                     )   # 设置tsp更新信息
 
-                    self.train_progress.update(self.tsp_progress, show_info=tsp_show_txt)
-                    self.train_progress.advance(self.tsp_progress, 1)
+                    self.train_progress.update(self.tsp_progress, show_info=tsp_show_txt, advance=1)
                     # 更新tsp信息与进度条
 
                     local_loss = (local_loss / self.update_steps) * self.accumulation_steps
@@ -209,10 +208,10 @@ class train():
                     )   # 创建日志对象
 
                     train_log.train_log()   # 记录训练日志
+                    self.test_model()   # 测试模型
                     self.save_model()   # 保存模型
 
-            self.train_progress.update(self.epoch_progress, show_info=epoch_show_txt)
-            self.train_progress.advance(self.epoch_progress, 1)
+            self.train_progress.update(self.epoch_progress, show_info=epoch_show_txt, advance=1)
             # 更新epoch信息与进度条
 
             self.test_model()   # 测试模型

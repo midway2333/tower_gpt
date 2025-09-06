@@ -4,17 +4,15 @@ from torch import nn, Tensor
 
 # 参考: https://github.com/retepViolet/Transformer-
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 class self_attention(nn.Module):   # 自注意力层
 
     def __init__(self, d, dk): 
         # d是词向量维度,dk是映射后的维度
         super().__init__()
         self.dk = dk
-        self.q = nn.Linear(d, dk)
-        self.k = nn.Linear(d, dk)
-        self.v = nn.Linear(d, dk)
+        self.q = nn.Linear(d, dk, bias=False)
+        self.k = nn.Linear(d, dk, bias=False)
+        self.v = nn.Linear(d, dk, bias=False)
         # 三个线性变换层
         # 将输入的词向量映射到dk维度
 
@@ -90,8 +88,8 @@ class decoder(nn.Module):
 
 class transformer(nn.Module):   # 模型实现
 
-    def __init__(self, decoder_num=12, head_num=12, d=768, dk=64,   \
-                  dff=1024, vocab_size=78336, padding_idx=3):
+    def __init__(self, decoder_num=8, head_num=8, d=1024, dk=128, dff=4096, vocab_size=32768,   \
+                    padding_idx=3, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
 
         """   
 
@@ -103,6 +101,7 @@ class transformer(nn.Module):   # 模型实现
         - dff: 前馈网络内部层的维度
         - vocab_size: 词汇表的大小
         - padding_idx: 填充的索引
+        - device: 设备类型
 
         """
 
@@ -117,18 +116,22 @@ class transformer(nn.Module):   # 模型实现
         self.d = d
         self.vocab_size = vocab_size
         self.padding_id = padding_idx
+        # 初始化模型的参数
+
+        self.device = device
+        # 初始化设备类型
 
         self.embedding = nn.Embedding(num_embeddings=self.vocab_size, embedding_dim=d,   \
-                                       padding_idx=self.padding_id).to(device)
+                                       padding_idx=self.padding_id).to(self.device)
         # 使用独立嵌入层
 
         self.decoders = nn.Sequential()   # 容器模块
 
         for _ in range(decoder_num):
-            self.decoders.append(decoder(head_num, d, dk, dff)).to(device)
+            self.decoders.append(decoder(head_num, d, dk, dff)).to(self.device)
             # 添加decoder_num个解码器
 
-        self.last_linear = nn.Linear(d, self.vocab_size).to(device)
+        self.last_linear = nn.Linear(d, self.vocab_size, bias=False).to(self.device)
         # 线性层,将解码器的输出映射到词汇表的大小
 
         self.embedding.weight = self.last_linear.weight
@@ -145,7 +148,7 @@ class transformer(nn.Module):   # 模型实现
             if self.zero_mask is None or sequence_len != self.zero_mask.size(0):
                 # 判断输入序列的长度是否与当前掩码长度相等
 
-                self.zero_mask = torch.zeros(sequence_len, sequence_len).to(device)
+                self.zero_mask = torch.zeros(sequence_len, sequence_len).to(self.device)
                 # 生成全零掩码
 
             return self.zero_mask
@@ -155,7 +158,7 @@ class transformer(nn.Module):   # 模型实现
         # 判断长度
 
             self.mask = torch.triu(torch.full((sequence_len, sequence_len),  \
-                                        float('-inf')).to(device), diagonal=1)
+                                        float('-inf')).to(self.device), diagonal=1)
             # 创建上三角掩码,设置掩码遮掩
 
         padding_mask = torch.zeros_like(data, dtype=torch.float)
@@ -173,10 +176,10 @@ class transformer(nn.Module):   # 模型实现
 
         seq_len = len   # 获得输入序列长度
 
-        pos = torch.arange(seq_len, dtype=torch.float).to(device)
+        pos = torch.arange(seq_len, dtype=torch.float).to(self.device)
         # 创建位置索引
 
-        inv_freq = (1.0 / (10000 ** (torch.arange(0, self.d, 2).float() / self.d))).to(device)
+        inv_freq = (1.0 / (10000 ** (torch.arange(0, self.d, 2).float() / self.d))).to(self.device)
         # 计算逆频率
         # 在位置编码中引入多尺度信息,确保编码数值稳定性
 
@@ -191,7 +194,7 @@ class transformer(nn.Module):   # 模型实现
 
     def forward(self, x:Tensor):
 
-        x = x.to(device)
+        x = x.to(self.device)
 
         sequence_len = x.shape[1]
         # 获取输入张量x的第二个维度的大小
@@ -215,3 +218,15 @@ class transformer(nn.Module):   # 模型实现
         # 将解码器的输出通过最后的线性层,得到每个位置的词汇表分布
 
         return y
+
+
+if __name__ == '__main__':
+
+    def count_parameters(model):
+        return sum(p.numel() for p in model.parameters())
+    
+    model = transformer()
+    input = torch.tensor([[1, 2, 3], [4, 5, 6]])
+    output = model(input)
+    print(output.shape)
+    print(count_parameters(model))

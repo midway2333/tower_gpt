@@ -30,7 +30,7 @@ class train():
     model: nn.Module,
     model_path: str,
     device: torch.device,
-    writer,
+    writer: SummaryWriter,
     rating: float,
     tb_name: str,
     wr_name,
@@ -65,8 +65,8 @@ class train():
         - wr_name: 训练日志名称
         - steps: 梯度累积步进
         - log_file: log文件
-        - block_size: 窗口大小(用于log)
-        - batch_size: 批次大小(用于log与loss计算)
+        - block_size: 窗口大小
+        - batch_size: 批次大小
         - update_steps: 更新步数
         - train_steps: 断点续训轮数
         - history_epoch: 已经训练的轮数
@@ -142,10 +142,6 @@ class train():
                 self.history_epoch, self.all_epoch
             )   # 设置epoch更新信息
 
-            tsp_show_txt = 'train_steps: {}/{}'.format(
-                self.train_steps, self.all_tsp
-            )   # 设置tsp更新信息
-
             for step, (x, y) in enumerate(self.dataloader):   # 生成步进索引
 
                 x, y = x.to(self.device).long(), y.to(self.device).long()   # 将数据移动到指定设备上
@@ -187,8 +183,7 @@ class train():
                         self.train_steps, self.all_tsp
                     )   # 设置tsp更新信息
 
-                    self.train_progress.update(self.tsp_progress, show_info=tsp_show_txt)
-                    self.train_progress.advance(self.tsp_progress, 1)
+                    self.train_progress.update(self.tsp_progress, show_info=tsp_show_txt, advance=1)
                     # 更新tsp信息与进度条
 
                     local_loss = (local_loss / self.update_steps) * self.accumulation_steps
@@ -213,10 +208,10 @@ class train():
                     )   # 创建日志对象
 
                     train_log.train_log()   # 记录训练日志
+                    self.test_model()   # 测试模型
                     self.save_model()   # 保存模型
 
-            self.train_progress.update(self.epoch_progress, show_info=epoch_show_txt)
-            self.train_progress.advance(self.epoch_progress, 1)
+            self.train_progress.update(self.epoch_progress, show_info=epoch_show_txt, advance=1)
             # 更新epoch信息与进度条
 
             self.test_model()   # 测试模型
@@ -300,7 +295,8 @@ class train():
             TimeRemainingColumn(),   # 显示基于当前进度推测估计的剩余时间
             TimeElapsedColumn(),   # 显示运行时间
             TextColumn("[bold blue]{task.fields[show_info]}"),   # 额外信息
-            refresh_per_second=1,  # 每1秒钟更新一次
+            refresh_per_second=1,   # 每1秒钟更新一次
+            speed_estimate_period=120,   # 更新采样窗口
         )
 
         self.epoch_progress = progress.add_task(description='epoch: ', show_info='', total=self.epoch)
@@ -346,7 +342,6 @@ class log():
                     train_step, rating, step, writer, tb_name):
 
         """
-
         日志记录
 
         参数:
@@ -360,7 +355,6 @@ class log():
         - step: 梯度累计步进
         - writer: tensorboard文件夹
         - tb_name: tensorboard_log名称
-
         """
 
         self.model_path = model_path
@@ -441,13 +435,11 @@ class log():
 def is_finetune(model: nn.Module, model_name: str):
 
     """
-
     微调判定
 
     参数:
     - model (nn.Module): 要微调的模型
     - model_name (str): 预训练模型的文件名
-
     """
 
     model.load_state_dict(torch.load(model_name, weights_only=True))
@@ -463,14 +455,14 @@ def is_finetune(model: nn.Module, model_name: str):
 
 if __name__ == '__main__':
 
-    file_path = 'sft_train.jsonl'
-    block_size = 128
-    batch_size = 12
+    file_path = 'data\\sft_train.jsonl'
+    block_size = 64
+    batch_size = 24
     # 训练集设置 jsonl格式
 
-    test_file_path = ''
-    test_block_size = 128
-    test_batch_size = 12
+    test_file_path = 'data\\sft_valid.json'
+    test_block_size = 64
+    test_batch_size = 24
     # 测试集设置 json格式
 
     sp = spm.SentencePieceProcessor()
@@ -487,21 +479,21 @@ if __name__ == '__main__':
     # 模型设置
 
     epoch = 2
-    rating = 5e-7
+    rating = 0.0001
     step = 16                   # 梯度累积步数
-    update_steps = 2048         # 更新步数
+    update_steps = 512         # 更新步数
     writer_file = 'tr_logs'
     writer = SummaryWriter(writer_file)
-    wr_name = 'sft_pre'     # tensorboard记录名称
-    use_test = False
-    fin_tuning = True   # 是否微调 # 记得调低学习率
-    use_scheduler = True   # 是否启用动态学习率
+    wr_name = 'test'     # tensorboard记录名称
+    use_test = True
+    fin_tuning = False   # 是否微调 # 记得调低学习率
+    use_scheduler = False   # 是否启用动态学习率
     # 训练设置
 
     model_path = 'tower.bin'
-    output_path = 'tower_sft.bin'   # None即覆盖原模型
-    log_file = 'sft.log'
-    opz_path = 'sft.bin_optimizer.pth'
+    output_path = None   # None即覆盖原模型
+    log_file = 'test.log'
+    opz_path = 'tower.bin_optimizer.pth'
     tsp = log.get_previous_train_step(log_file)
     ep  = log.get_previous_epoch(log_file)
     # 信息设置
