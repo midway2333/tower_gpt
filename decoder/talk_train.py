@@ -164,6 +164,9 @@ class train():
                 local_loss += loss.item()
                 # 计算一个批次的损失
 
+                self.train_progress.update(self.tsp_progress, advance=1 / self.update_steps)
+                # 更新 tsp 进度条
+
                 if (step + 1) % self.accumulation_steps == 0:
                     self.scaler.unscale_(self.optimizer)
                     torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
@@ -183,8 +186,8 @@ class train():
                         self.train_steps, self.all_tsp
                     )   # 设置tsp更新信息
 
-                    self.train_progress.update(self.tsp_progress, show_info=tsp_show_txt, advance=1)
-                    # 更新tsp信息与进度条
+                    self.train_progress.update(self.tsp_progress, show_info=tsp_show_txt)
+                    # 更新 tsp 信息
 
                     local_loss = (local_loss / self.update_steps) * self.accumulation_steps
                     # 计算平均损失,不必乘以batch_size,除以update_steps已经获得了平均值
@@ -484,8 +487,8 @@ if __name__ == '__main__':
     update_steps = 512         # 更新步数
     writer_file = 'tr_logs'
     writer = SummaryWriter(writer_file)
-    wr_name = 'test'     # tensorboard记录名称
-    use_test = True
+    wr_name = 'test_without_test'     # tensorboard记录名称
+    use_test = False
     fin_tuning = False   # 是否微调 # 记得调低学习率
     use_scheduler = False   # 是否启用动态学习率
     # 训练设置
