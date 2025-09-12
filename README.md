@@ -140,14 +140,21 @@ galore-torch库<br>
 - 工具文件结构优化<br>
 </details>
 
-<details open> 
+<details close> 
 <summary>  <b>25.9.6更新</b> </summary>
 - 剔除了一些不必要的线性偏置<br>
 - 修复训练文件的进度条预测时间显示问题<br>
 - <del>我就说项目还会更新的吧.jpg</del> <br>
 </details>
 
+<details open> 
+<summary>  <b>25.9.13更新</b> </summary>
+- 重构多头，提高并行效率<br>
+- 修改位置编码为内嵌式RoPE<br>
+</details>
+
 ## 有关问题
 本项目虽然已经经过了一段时间的发展，但规范性与实用性依然无法看齐业界内的其它项目；如果您发现了任何新的问题或有关本项目的优化，欢迎在本项目的[issues](https://github.com/midway2333/tower_gpt/issues)中提出<br>
 [第二代Tower](https://github.com/midway2333/Tower2)已经开源！但本项目依然维持更新
+
 
