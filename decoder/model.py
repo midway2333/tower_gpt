@@ -4,52 +4,163 @@ from torch import nn, Tensor
 
 # 参考: https://github.com/retepViolet/Transformer-
 
-class self_attention(nn.Module):   # 自注意力层
 
-    def __init__(self, d, dk): 
-        # d是词向量维度,dk是映射后的维度
+class RoPE_Emb(nn.Module):
+    """RoPE位置编码"""
+    def __init__(self, d: int, max_len: int=4096, device: str | None=None):
+        """
+        RoPE位置编码, Tower2 技术下放(doge)
+        - d: 模型维度
+        - max_len: 最大序列长度
+        """
         super().__init__()
+
+        self.d = d
+        self.max_len = max_len
+        self.device = device
+
+        inv_freq = 1.0 / (10000 ** (torch.arange(0, d, 2).float().to(device) / d))
+        # 计算频率
+
+        self.register_buffer('inv_freq', inv_freq, persistent=False)
+        # 注册频率
+
+        self._get_embedding(inv_freq)
+        # 预计算
+
+    def _get_embedding(self, inv_freq):
+        """预计算位置编码"""
+        len_ids = torch.arange(self.max_len, device=self.device)
+        # 序列索引
+
+        freqs = torch.outer(len_ids, inv_freq)
+        # 计算频率
+
+        emb = torch.cat((freqs, freqs), dim=-1)
+        # 复制频率参数, 使复数对共享相同的频率
+
+        self.register_buffer("cos_cached", emb.cos(), persistent=False)
+        self.register_buffer("sin_cached", emb.sin(), persistent=False)
+        # 频率缓存
+
+    def forward(self) -> tuple:
+        """
+        生成RoPE位置编码
+        """
+
+        self.cos_cached: Tensor
+        self.sin_cached: Tensor
+
+        return (
+            self.cos_cached,
+            self.sin_cached,
+        )
+
+def RoPE_rotate(x: Tensor) -> Tensor:
+    """
+    RoPE旋转操作
+    - x: 输入张量
+    """
+    x1 = x[..., : x.shape[-1] // 2]   # 取前一半维度
+    x2 = x[..., x.shape[-1] // 2 :]   # 取后一半维度
+    return torch.cat((-x2, x1), dim=-1)   # 拼接
+
+def RoPE_reshape(x: Tensor) -> Tensor:
+    """重塑张量形状"""
+    batch, head_num, seq_len, dim = x.shape
+    x = x.view(batch, head_num, seq_len, dim//2, 2).transpose(4, 3).reshape(batch, head_num, seq_len, dim)
+
+    return x
+
+def RoPE_apply(q: Tensor, k: Tensor, cos: Tensor, sin: Tensor, pos_ids: Tensor):
+    """
+    应用RoPE编码
+    - q: query
+    - k: key
+    - cos: RoPE cos
+    - sin: RoPE sin
+    - pos_ids: 位置索引
+    """
+    cos = cos[pos_ids].unsqueeze(0).unsqueeze(0)   # 按位置索引选择cos值
+    sin = sin[pos_ids].unsqueeze(0).unsqueeze(0)   # 按位置索引选择sin值
+
+    q = RoPE_reshape(q)
+    # 重塑 Query
+
+    k = RoPE_reshape(k)
+    # 重塑 Key
+
+    q_embed = (q * cos) + (RoPE_rotate(q) * sin)
+    k_embed = (k * cos) + (RoPE_rotate(k) * sin)
+    # 应用旋转位置编码
+
+    return q_embed, k_embed
+
+
+class MHA(nn.Module):
+    """多头自注意力层"""
+    def __init__(self, d, dk, head_num, device: str | None=None):
+        """
+        参数:
+        - d: 输入/输出的维度
+        - dk: 每个头的维度
+        - head_num: 头的数量
+        - use_dropout: 是否使用dropout
+        """
+        super().__init__()
+        self.head_num = head_num
         self.dk = dk
-        self.q = nn.Linear(d, dk, bias=False)
-        self.k = nn.Linear(d, dk, bias=False)
-        self.v = nn.Linear(d, dk, bias=False)
-        # 三个线性变换层
-        # 将输入的词向量映射到dk维度
 
-    def attention(self, Q:Tensor, K:Tensor, V:Tensor, mask:Tensor):
+        self.q_proj = nn.Linear(d, head_num * dk)
+        self.k_proj = nn.Linear(d, head_num * dk)
+        self.v_proj = nn.Linear(d, head_num * dk)
+        self.o_proj = nn.Linear(head_num * dk, d)
+        # 初始化投影层
 
-        output = fc.scaled_dot_product_attention   \
-                (Q, K, V, attn_mask=mask, dropout_p=0.05 if self.training else 0, is_causal=False)
-        
-        return output
+        self.rope = RoPE_Emb(dk, max_len=4096, device=device)
+        # 初始化 RoPE
 
-        # Q是查询向量,K是键向量;将K的转置与Q相乘,得到一个矩阵
-        # 矩阵中每个元素表示查询向量和对应键向量之间的相似度
-        # self.dk**0.5起到调节作用,使得内积不至于太大
-        # 最后归一化,dim=-1使softmax沿最后一个维度进行
+    def forward(self, x: Tensor, mask: Tensor | None = None) -> Tensor:
+        batch_size, seq_len, _ = x.size()
 
-    def forward(self, x:tuple):
-        x, mask = x
-        Q = self.q(x)   # 生成query
-        K = self.k(x)   # 生成key
-        V = self.v(x)   # 生成value
-        return self.attention(Q, K, V, mask)   # attention计算
+        pos_ids = torch.arange(seq_len, device=x.device)
+        # 生成位置索引 [seq_len]
+
+        Q: Tensor = self.q_proj(x)
+        K: Tensor = self.k_proj(x)
+        V: Tensor = self.v_proj(x)
+        # 并行投影, 方便并行计算
+
+        Q = Q.view(batch_size, seq_len, self.head_num, self.dk).transpose(1, 2)
+        K = K.view(batch_size, seq_len, self.head_num, self.dk).transpose(1, 2)
+        V = V.view(batch_size, seq_len, self.head_num, self.dk).transpose(1, 2)
+        # 分成多个注意力头 [batch, seq_len, head_num, dk]
+
+
+        cos, sin = self.rope()
+        Q, K = RoPE_apply(Q, K, cos, sin, pos_ids)
+
+        attn_output = fc.scaled_dot_product_attention(Q, K, V,
+            dropout_p=0.05 if self.training else 0,
+            attn_mask=mask,
+            is_causal=False,
+        )   # 注意力计算
+
+        attn_output = attn_output.transpose(1, 2).contiguous()
+        attn_output = attn_output.view(batch_size, seq_len, -1)
+        return self.o_proj(attn_output)
+        # 合并输出
 
 
 class decoder(nn.Module):
 
-    def __init__(self, head_num, d, dk, dff):
+    def __init__(self, head_num, d, dk, dff, device: str | None=None):
     # head_num:注意力头数 d:输入/输出维度
     # dk:每个头的维度 dff:前馈网络内部层的维度
 
         super().__init__()
-        self.heads = nn.ModuleList()    # 存储多头注意力机制的所有头
-        # ModuleList可以看作是一个存储了多个nn.Module对象的列表
-
-        for _ in range(head_num):
-            self.heads.append(self_attention(d, dk))
-            # 创建了head_num个自注意力层,并将它们添加到self.heads列表中
-            # 每个自注意力层都接收d和dk作为参数
+        self.multi_head = MHA(d, dk, head_num, device=device)
+        # 多头注意力机制
 
         self.o = nn.Linear(head_num * dk, d)
         # 将多头注意力机制的输出合并成一个单一的输出
@@ -70,18 +181,14 @@ class decoder(nn.Module):
         x, mask = inputs  # x为需要处理的数据
 
         norm_x = self.norm1(x)   # 层归一化
-        heads_outputs = [head((norm_x, mask)) for head in self.heads]
+        multi_head_output = self.multi_head(norm_x, mask)
         # 运用多头注意力机制
-
-        multi_head_output = self.o(torch.concat(heads_outputs, dim=-1))
-        # 将heads_res列表中的所有输出沿最后一个维度(dim=-1)连接起来
-        # 然后将多头注意力机制的输出合并成一个单一的输出
 
         residual_and_norm = multi_head_output + x
         norm_residual = self.norm2(residual_and_norm)
         final_output = self.ffn(norm_residual) + residual_and_norm
         # 再次应用层归一化，然后通过前馈神经网络
-        # 使用的是Pre_layer_normalization
+        # 使用的是 Pre_layer_normalization
 
         return (final_output, mask)
 
@@ -89,7 +196,7 @@ class decoder(nn.Module):
 class transformer(nn.Module):   # 模型实现
 
     def __init__(self, decoder_num=8, head_num=8, d=1024, dk=128, dff=4096, vocab_size=32768,   \
-                    padding_idx=3, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
+                    padding_idx=3, device: str='cuda' if torch.cuda.is_available() else 'cpu'):
 
         """   
 
@@ -128,7 +235,7 @@ class transformer(nn.Module):   # 模型实现
         self.decoders = nn.Sequential()   # 容器模块
 
         for _ in range(decoder_num):
-            self.decoders.append(decoder(head_num, d, dk, dff)).to(self.device)
+            self.decoders.append(decoder(head_num, d, dk, dff, self.device)).to(self.device)
             # 添加decoder_num个解码器
 
         self.last_linear = nn.Linear(d, self.vocab_size, bias=False).to(self.device)
@@ -151,7 +258,7 @@ class transformer(nn.Module):   # 模型实现
                 self.zero_mask = torch.zeros(sequence_len, sequence_len).to(self.device)
                 # 生成全零掩码
 
-            return self.zero_mask
+            return self.zero_mask.unsqueeze(1)
             # 返回新的全零掩码
 
         if self.mask is None or sequence_len != self.mask.size(0):
@@ -169,28 +276,9 @@ class transformer(nn.Module):   # 模型实现
         # 扩展padding_mask维度
 
         atta_mask = self.mask + padding_mask
-        return atta_mask
+        return atta_mask.unsqueeze(1)
         # 返回掩码
 
-    def rope_encode(self, len:int):   # RoPE位置编码
-
-        seq_len = len   # 获得输入序列长度
-
-        pos = torch.arange(seq_len, dtype=torch.float).to(self.device)
-        # 创建位置索引
-
-        inv_freq = (1.0 / (10000 ** (torch.arange(0, self.d, 2).float() / self.d))).to(self.device)
-        # 计算逆频率
-        # 在位置编码中引入多尺度信息,确保编码数值稳定性
-
-        sinusoid_inp = torch.einsum("i,d->id", pos, inv_freq)
-        # 使用爱因斯坦求和约定
-        # 生成位置编码
-
-        pos_emb = torch.cat([torch.sin(sinusoid_inp), torch.cos(sinusoid_inp)], dim=-1)
-        # 连接生成结果,三角位置计算
-
-        return pos_emb
 
     def forward(self, x:Tensor):
 
@@ -200,15 +288,11 @@ class transformer(nn.Module):   # 模型实现
         # 获取输入张量x的第二个维度的大小
 
         ebd_x = self.embedding(x)   # 使用嵌入层
- 
-        output_x = ebd_x * self.d**0.5 + self.rope_encode(sequence_len)   # type: ignore
-        # 将嵌入向量乘以嵌入维度的平方根(防止嵌入值过大)
-        # 添加位置编码
 
         atta_mask = self.get_mask(sequence_len=sequence_len, data=x)
         # 创造掩码
 
-        y, _ = self.decoders((output_x, atta_mask))
+        y, _ = self.decoders((ebd_x, atta_mask))
         # 将带有位置编码的嵌入向量和掩码传递给解码器
         # 解码器返回的y是每个位置的输出向量
         # 将解码器的输出赋值给y,并且忽略注意力权重
@@ -225,8 +309,8 @@ if __name__ == '__main__':
     def count_parameters(model):
         return sum(p.numel() for p in model.parameters())
     
-    model = transformer()
-    input = torch.tensor([[1, 2, 3], [4, 5, 6]])
+    model = transformer(device='cuda')
+    input = torch.tensor([[1, 2, 3], [4, 5, 6]]).to('cuda')
     output = model(input)
     print(output.shape)
     print(count_parameters(model))
