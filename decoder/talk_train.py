@@ -47,6 +47,7 @@ class train():
     opz_path = None,
     output_path=None,
     use_scheduler: bool = False,
+    padding_id: int = 3,
     ):
 
         """
@@ -75,6 +76,7 @@ class train():
         - opz_path: 优化器参数文件路径
         - output_path: 输出模型路径
         - use_scheduler: 是否启用学习率调度器
+        - padding_id: 填充 id
 
         注意: 启用学习调度器可能导致断点续训不正常
 
@@ -102,8 +104,9 @@ class train():
         self.output_path = output_path
         self.data_length = data_length
         self.use_scheduler = use_scheduler
+        self.padding_idx = padding_id
 
-        self.loss_fn = nn.CrossEntropyLoss()   # 交叉熵损失函数
+        self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.padding_idx)   # 交叉熵损失函数
         self.accumulation_steps = steps   # 设置累积步数
         self.scaler = GradScaler()   # 梯度缩放器
 
@@ -459,8 +462,8 @@ def is_finetune(model: nn.Module, model_name: str):
 if __name__ == '__main__':
 
     file_path = 'data\\sft_train.jsonl'
-    block_size = 64
-    batch_size = 24
+    block_size = 128
+    batch_size = 12
     # 训练集设置 jsonl格式
 
     test_file_path = 'data\\sft_valid.json'
@@ -478,7 +481,7 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # 设备获取
 
-    model = transformer(vocab_size=vocab_size, padding_idx=padding_id)
+    model = transformer(vocab_size=vocab_size, padding_idx=padding_id, device='cuda')
     # 模型设置
 
     epoch = 2
@@ -551,6 +554,8 @@ if __name__ == '__main__':
         test_dataloader=test_dataloader,
         opz_path=opz_path,
         output_path=output_path,
+        use_scheduler=use_scheduler,
+        padding_id=padding_id,
     )
 
     run.train_model()   # 训练模型

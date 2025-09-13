@@ -47,6 +47,7 @@ class train():
     opz_path = None,
     output_path=None,
     use_scheduler: bool = False,
+    padding_id: int = 3,
     ):
 
         """
@@ -75,6 +76,7 @@ class train():
         - opz_path: 优化器参数文件路径
         - output_path: 输出模型路径
         - use_scheduler: 是否启用学习率调度器
+        - padding_id: 填充 id
 
         注意: 启用学习调度器可能导致断点续训不正常
 
@@ -102,8 +104,9 @@ class train():
         self.output_path = output_path
         self.data_length = data_length
         self.use_scheduler = use_scheduler
+        self.padding_id = padding_id
 
-        self.loss_fn = nn.CrossEntropyLoss()   # 交叉熵损失函数
+        self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.padding_id)   # 交叉熵损失函数
         self.accumulation_steps = steps   # 设置累积步数
         self.scaler = GradScaler()   # 梯度缩放器
 
@@ -549,6 +552,8 @@ if __name__ == '__main__':
         test_dataloader=test_dataloader,
         opz_path=opz_path,
         output_path=output_path,
+        use_scheduler=use_scheduler,
+        padding_id=padding_id,
     )
 
     run.train_model()   # 训练模型

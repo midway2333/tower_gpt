@@ -196,7 +196,7 @@ class decoder(nn.Module):
 class transformer(nn.Module):   # 模型实现
 
     def __init__(self, decoder_num=8, head_num=8, d=1024, dk=128, dff=4096, vocab_size=32768,   \
-                    padding_idx=3, device: str='cuda' if torch.cuda.is_available() else 'cpu'):
+                    padding_idx=3, device: str='cuda' if torch.cuda.is_available() else 'cpu', init: bool=True):
 
         """   
 
@@ -209,7 +209,7 @@ class transformer(nn.Module):   # 模型实现
         - vocab_size: 词汇表的大小
         - padding_idx: 填充的索引
         - device: 设备类型
-
+        - init: 是否初始化模型权重
         """
 
         # 在自带词表中padding_id=3
@@ -241,10 +241,13 @@ class transformer(nn.Module):   # 模型实现
         self.last_linear = nn.Linear(d, self.vocab_size, bias=False).to(self.device)
         # 线性层,将解码器的输出映射到词汇表的大小
 
-        self.embedding.weight = self.last_linear.weight
+        self.last_linear.weight = self.embedding.weight
         # 共享weight和embedding权重
 
         self.softmax = nn.Softmax(dim=-1)   # 转换为概率分布
+
+        if init:   # 初始化模型权重
+            self.init_weights()
 
     def get_mask(self, sequence_len, data):
         padding_idx = self.padding_id
@@ -279,6 +282,26 @@ class transformer(nn.Module):   # 模型实现
         return atta_mask.unsqueeze(1)
         # 返回掩码
 
+    def init_weights(self):
+        """初始化模型权重"""
+        nn.init.normal_(self.embedding.weight, mean=0.0, std=0.02)   # 初始化 embedding
+        if self.padding_id is not None:
+            self.embedding.weight.data[self.padding_id].zero_()
+            # 确保 padding token 的 embedding 为 0
+
+        for module in self.decoders.modules():
+            if isinstance(module, nn.Linear):
+                nn.init.normal_(module.weight, mean=0.0, std=0.02)
+                if module.bias is not None:
+                    nn.init.zeros_(module.bias)
+            # 初始化 decoder 中的线性层
+
+            elif isinstance(module, nn.LayerNorm):
+                nn.init.ones_(module.weight)
+                nn.init.zeros_(module.bias)
+                # 初始化 LayerNorm
+
+        print("模型权重已初始化")
 
     def forward(self, x:Tensor):
 
