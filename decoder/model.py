@@ -111,10 +111,10 @@ class MHA(nn.Module):
         self.head_num = head_num
         self.dk = dk
 
-        self.q_proj = nn.Linear(d, head_num * dk)
-        self.k_proj = nn.Linear(d, head_num * dk)
-        self.v_proj = nn.Linear(d, head_num * dk)
-        self.o_proj = nn.Linear(head_num * dk, d)
+        self.q_proj = nn.Linear(d, head_num * dk, bias=False)
+        self.k_proj = nn.Linear(d, head_num * dk, bias=False)
+        self.v_proj = nn.Linear(d, head_num * dk, bias=False)
+        self.o_proj = nn.Linear(head_num * dk, d, bias=False)
         # 初始化投影层
 
         self.rope = RoPE_Emb(dk, max_len=4096, device=device)
@@ -332,7 +332,7 @@ if __name__ == '__main__':
     def count_parameters(model):
         return sum(p.numel() for p in model.parameters())
     
-    model = transformer(device='cuda')
+    model = transformer(decoder_num=10, head_num=8, d=1024, dk=128, dff=4096, vocab_size=32768, padding_idx=3, device='cuda')
     input = torch.tensor([[1, 2, 3], [4, 5, 6]]).to('cuda')
     output = model(input)
     print(output.shape)
