@@ -168,10 +168,10 @@ class decoder(nn.Module):
 
         self.norm1 = nn.LayerNorm(d)   # 层归一化
 
-        self.ffn = nn.Sequential(   # 前馈网络
-            nn.Linear(d, dff),      # 维度变换
-            nn.GELU(),              # 激活函数
-            nn.Linear(dff, d),      # 维度变换
+        self.ffn = nn.Sequential(             # 前馈网络
+            nn.Linear(d, dff, bias=False),    # 维度变换
+            nn.GELU(),                        # 激活函数
+            nn.Linear(dff, d, bias=False),    # 维度变换
         )
 
         self.norm2 = nn.LayerNorm(d)   # 前馈网络输出层归一化
@@ -332,7 +332,7 @@ if __name__ == '__main__':
     def count_parameters(model):
         return sum(p.numel() for p in model.parameters())
     
-    model = transformer(decoder_num=10, head_num=8, d=1024, dk=128, dff=4096, vocab_size=32768, padding_idx=3, device='cuda')
+    model = transformer(decoder_num=12, head_num=8, d=1024, dk=128, dff=4096, vocab_size=32768, padding_idx=3, device='cuda')
     input = torch.tensor([[1, 2, 3], [4, 5, 6]]).to('cuda')
     output = model(input)
     print(output.shape)
