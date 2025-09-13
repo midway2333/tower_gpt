@@ -132,13 +132,13 @@ class DialogueDataProcessor:
 class DialogueDataset(Dataset):   # 负责加载和编码数据的实例
     def __init__(self, processor):
         self.inputs, self.targets = processor.load_and_encode_data()
-    
+
     def __len__(self):   # 返回数据集的大小
         return len(self.inputs)
-    
+
     def __getitem__(self, idx):   # 根据索引获取数据集中的样本
         return self.inputs[idx], self.targets[idx]
-    
+
 class GeneratorDialogueDataset(IterableDataset):   # 负责生成器模式下加载和编码数据的实例
     def __init__(self, processor):
         super().__init__()
@@ -146,7 +146,7 @@ class GeneratorDialogueDataset(IterableDataset):   # 负责生成器模式下加
 
     def __iter__(self):   # 返回一个迭代器对象,每次迭代时从生成器中获取下一个样本
         return iter(self.processor.data_generator())
-    
+
 
 """ ------------------------------------- 以上为长文本dataset ------------------------------------- """
 
@@ -225,9 +225,9 @@ class Talk_DialogueDataProcessor:
         user_input = dialogue['prompt']   # <<<对于不同的训练集可能需要在此修改
         assistant_response = dialogue['response']   # <<<对于不同的训练集可能需要在此修改
 
-        input_ids = self.user_id + \
+        input_ids = [self.bos_id] + self.user_id + \
             self.sp.encode(user_input, out_type=int) + [self.eos_id]   # type: ignore
-        response_ids = self.bot_id + \
+        response_ids = [self.bos_id] + self.bot_id + \
             self.sp.encode(assistant_response, out_type=int) + [self.eos_id]   # type: ignore
 
         input_all = input_ids + response_ids   # 总输入
