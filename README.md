@@ -151,10 +151,10 @@ galore-torch库<br>
 <summary>  <b>25.9.13更新</b> </summary>
 - 重构多头，提高并行效率<br>
 - 修改位置编码为内嵌式RoPE<br>
+- 为模型添加 init 方法<br>
 </details>
 
 ## 有关问题
 本项目虽然已经经过了一段时间的发展，但规范性与实用性依然无法看齐业界内的其它项目；如果您发现了任何新的问题或有关本项目的优化，欢迎在本项目的[issues](https://github.com/midway2333/tower_gpt/issues)中提出<br>
 [第二代Tower](https://github.com/midway2333/Tower2)已经开源！但本项目依然维持更新
-
 
