@@ -261,7 +261,7 @@ class transformer(nn.Module):   # 模型实现
                 self.zero_mask = torch.zeros(sequence_len, sequence_len).to(self.device)
                 # 生成全零掩码
 
-            return self.zero_mask.unsqueeze(1)
+            return self.zero_mask
             # 返回新的全零掩码
 
         if self.mask is None or sequence_len != self.mask.size(0):
