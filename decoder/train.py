@@ -265,6 +265,8 @@ class train():
             self.writer.add_scalar(self.wr_name+'_test', self.avg_test_loss, self.train_steps)
             # 记录测试损失
 
+            self.model.train()
+
         else:   # 无测试集时跳过
             pass
 
