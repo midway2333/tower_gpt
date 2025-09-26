@@ -54,7 +54,7 @@ class DialogueDataProcessor:
 
             if len(input_ids) > self.block_size:   # 随机选择一个起始索引
 
-                i = random.randint(0, len(input_ids) - self.block_size)
+                i = random.randint(0, len(input_ids) - self.block_size - 1)
                 x_data = input_ids[i:i+self.block_size]
                 y_data = input_ids[i+1:i+1+self.block_size]
 
@@ -101,7 +101,7 @@ class DialogueDataProcessor:
 
                 if len(input_ids) > self.block_size:   # 随机选择一个起始索引
 
-                    i = random.randint(0, len(input_ids) - self.block_size)
+                    i = random.randint(0, len(input_ids) - self.block_size - 1)
                     x_data = input_ids[i:i+self.block_size]
                     y_data = input_ids[i+1:i+1+self.block_size]
 
