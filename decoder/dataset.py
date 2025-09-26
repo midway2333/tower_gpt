@@ -25,7 +25,7 @@ class DialogueDataProcessor:
         self.padding_id = self.sp.pad_id()
         self.bos_id = self.sp.bos_id()
         self.eos_id = self.sp.eos_id()
-        self.buffer_size: int=8192   # 缓冲区大小
+        self.buffer_size: int=32768   # 缓冲区大小
     
     def load_and_encode_data(self):
 
@@ -48,28 +48,30 @@ class DialogueDataProcessor:
         targets = []
 
         for dialogue in data:   # 遍历每个文本
-            input = dialogue['lines']   # <<<对于不同的训练集可能需要在此修改
-
-            input_ids = [self.bos_id] + self.sp.encode(input, out_type=int) + [self.eos_id]   # type: ignore
-            response_ids = [self.bos_id] + self.sp.encode(input, out_type=int) + [self.eos_id]    # type: ignore
-            # 使用SentencePiece分词器进行编码
-
-            input_ids = torch.tensor(input_ids, dtype=torch.int32)
-            response_ids = torch.tensor(response_ids, dtype=torch.int32)
-            # 将编码信息转换为tensor
-
+            input = dialogue['text']   # 获取用户输入文本
+            input_ids = self.sp.encode(input, out_type=int)   # type: ignore
+            input_ids = [self.bos_id] + input_ids + [self.eos_id]
 
             if len(input_ids) > self.block_size:   # 随机选择一个起始索引
 
-                i = random.randint(0, len(input_ids) - self.block_size -1)
+                i = random.randint(0, len(input_ids) - self.block_size)
                 x_data = input_ids[i:i+self.block_size]
-                y_data = response_ids[i+1:i+1+self.block_size]
+                y_data = input_ids[i+1:i+1+self.block_size]
 
-                inputs.append(x_data)
-                targets.append(y_data)
+                x_data = torch.tensor(x_data, dtype=torch.int32)
+                y_data = torch.tensor(y_data, dtype=torch.int32)
+                # 将编码信息转换为tensor    
 
-            else:   # 如果文件长度小于block_size,舍弃
-                pass
+            else:   # 短序列: 填充
+                x_data = input_ids[:-1] + [self.padding_id] * (self.block_size - len(input_ids) + 1)
+                y_data = input_ids[1:] + [self.padding_id] * (self.block_size - len(input_ids) + 1)
+
+                x_data = torch.tensor(x_data, dtype=torch.int32)
+                y_data = torch.tensor(y_data, dtype=torch.int32)
+                # 将编码信息转换为tensor
+
+            inputs.append(x_data)
+            targets.append(y_data)
         
         return inputs, targets
 
@@ -93,35 +95,43 @@ class DialogueDataProcessor:
             for line in f:   # 加载jsonl文件,或者说非数组json
                 dialogue = json.loads(line.strip())
 
-                input = dialogue['lines']   # 获取用户输入文本
+                input = dialogue['text']   # 获取用户输入文本
                 input_ids = self.sp.encode(input, out_type=int)   # type: ignore
-
-                input_ids = torch.tensor(input_ids, dtype=torch.int32)
-                # 将编码信息转换为tensor
+                input_ids = [self.bos_id] + input_ids + [self.eos_id]
 
                 if len(input_ids) > self.block_size:   # 随机选择一个起始索引
 
-                    i = random.randint(0, len(input_ids) - self.block_size -1)
+                    i = random.randint(0, len(input_ids) - self.block_size)
                     x_data = input_ids[i:i+self.block_size]
                     y_data = input_ids[i+1:i+1+self.block_size]
 
-                    if len(buffer_list) < self.buffer_size:   # 添加数据
-                        buffer_list.append( (x_data, y_data) )
-                        continue
+                    x_data = torch.tensor(x_data, dtype=torch.int32)
+                    y_data = torch.tensor(y_data, dtype=torch.int32)
+                    # 将编码信息转换为tensor    
 
-                    shuffle(buffer_list)   # 缓存区满了,返回数据
-                    for inputs, targets in buffer_list:
-                        yield inputs, targets   # 迭代
+                else:   # 短序列: 填充
+                    x_data = input_ids[:-1] + [self.padding_id] * (self.block_size - len(input_ids) + 1)
+                    y_data = input_ids[1:] + [self.padding_id] * (self.block_size - len(input_ids) + 1)
 
-                    buffer_list = []   # 清空缓冲区
-
-                else:   # 舍弃
-                    pass
+                    x_data = torch.tensor(x_data, dtype=torch.int32)
+                    y_data = torch.tensor(y_data, dtype=torch.int32)
+                    # 将编码信息转换为tensor
             
-            if buffer_list:   # 处理剩余的缓冲区数据
-                shuffle(buffer_list)
+                # 添加到缓冲区
+                buffer_list.append((x_data, y_data))
+                
+                # 检查缓冲区是否已满
+                if len(buffer_list) >= self.buffer_size:
+                    random.shuffle(buffer_list)
+                    for inputs, targets in buffer_list:
+                        yield inputs, targets
+                    buffer_list = []  # 清空缓冲区
+            
+            # 处理剩余的缓冲区数据
+            if buffer_list:
+                random.shuffle(buffer_list)
                 for inputs, targets in buffer_list:
-                    yield inputs, targets  # 迭代
+                    yield inputs, targets
     
     def data_length(self):
         """返回数据集的长度"""
