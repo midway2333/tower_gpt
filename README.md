@@ -147,11 +147,17 @@ galore-torch库<br>
 - <del>我就说项目还会更新的吧.jpg</del> <br>
 </details>
 
-<details open> 
+<details close> 
 <summary>  <b>25.9.13更新</b> </summary>
 - 重构多头，提高并行效率<br>
 - 修改位置编码为内嵌式RoPE<br>
 - 为模型添加 init 方法<br>
+</details>
+
+<details open> 
+<summary>  <b>25.9.26更新</b> </summary>
+- 添加 padding 掩码<br>
+- 修复<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/dataset.py">dataset</a>错误<br>
 </details>
 
 ## 有关问题
