@@ -141,7 +141,7 @@ class MHA(nn.Module):
         Q, K = RoPE_apply(Q, K, cos, sin, pos_ids)
 
         attn_output = fc.scaled_dot_product_attention(Q, K, V,
-            dropout_p=0.05 if self.training else 0,
+            dropout_p=0.1 if self.training else 0,
             attn_mask=mask,
             is_causal=False,
         )   # 注意力计算
@@ -170,6 +170,7 @@ class decoder(nn.Module):
 
         self.ffn = nn.Sequential(             # 前馈网络
             nn.Linear(d, dff, bias=False),    # 维度变换
+            nn.Dropout(0.1),                  # Dropout层
             nn.GELU(),                        # 激活函数
             nn.Linear(dff, d, bias=False),    # 维度变换
         )
