@@ -158,6 +158,7 @@ galore-torch库<br>
 <summary>  <b>25.9.26更新</b> </summary>
 - 添加 padding 掩码<br>
 - 修复<a href="https://github.com/midway2333/tower_gpt/blob/main/decoder/dataset.py">dataset</a>错误<br>
+- 完善续训练
 </details>
 
 ## 有关问题
