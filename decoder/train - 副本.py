@@ -30,7 +30,7 @@ class train():
     model: nn.Module,
     model_path: str,
     device: torch.device,
-    writer: SummaryWriter,
+    writer,
     rating: float,
     tb_name: str,
     wr_name,
@@ -67,8 +67,8 @@ class train():
         - wr_name: 训练日志名称
         - steps: 梯度累积步进
         - log_file: log文件
-        - block_size: 窗口大小
-        - batch_size: 批次大小
+        - block_size: 窗口大小(用于log)
+        - batch_size: 批次大小(用于log与loss计算)
         - update_steps: 更新步数
         - train_steps: 断点续训轮数
         - history_epoch: 已经训练的轮数
@@ -106,9 +106,11 @@ class train():
         self.output_path = output_path
         self.data_length = data_length
         self.use_scheduler = use_scheduler
-        self.padding_idx = padding_id
+        self.padding_id = padding_id
+        self.continue_training = continue_training
+        # 参数赋值
 
-        self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.padding_idx)   # 交叉熵损失函数
+        self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.padding_id)   # 交叉熵损失函数
         self.accumulation_steps = steps   # 设置累积步数
         self.scaler = GradScaler()   # 梯度缩放器
 
@@ -182,7 +184,7 @@ class train():
                 # 更新 tsp 进度条
 
                 if (step + 1) % self.accumulation_steps == 0:
-                    self.scaler.unscale_(self.optimizer)
+
                     torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
                     # 梯度裁剪
 
@@ -285,13 +287,11 @@ class train():
         """保存模型与优化器参数"""
         torch.save(self.model.state_dict(), self.output_path)   # type: ignore     # 保存模型
         opt_dict = self.optimizer.state_dict()                                     # 续存优化器
-        torch.save(opt_dict, self.output_path)   # type: ignore                       # 保存优化器
+        torch.save(opt_dict, self.output_path)   # type: ignore                    # 保存优化器
 
         if self.use_scheduler:   # 保存调度器
             scheduler_state = self.rate_scheduler.state_dict()
             torch.save(scheduler_state, f"{self.output_path}_scheduler.pth")
-
-        self.model.train()  # 恢复训练模式
 
     def epoch_save(self):
         """每epoch保存模型,用于防止训练出错"""
@@ -312,8 +312,7 @@ class train():
             TimeRemainingColumn(),   # 显示基于当前进度推测估计的剩余时间
             TimeElapsedColumn(),   # 显示运行时间
             TextColumn("[bold blue]{task.fields[show_info]}"),   # 额外信息
-            refresh_per_second=1,   # 每1秒钟更新一次
-            speed_estimate_period=120,   # 更新采样窗口
+            refresh_per_second=1,  # 每1秒钟更新一次
         )
 
         self.epoch_progress = progress.add_task(description='epoch: ', show_info='', total=self.epoch)
@@ -336,13 +335,12 @@ class train():
 
         self.rate_scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optimizer=self.optimizer,
-            max_lr=15 * self.rating,
+            max_lr=50 * self.rating,
             epochs=self.all_epoch,
             cycle_momentum=False,
             steps_per_epoch=int(np.ceil(self.data_length / (self.batch_size * self.accumulation_steps))),
-            div_factor=15,
+            div_factor=50,
             last_epoch=last_step,
-            pct_start=0.1,
         )   # 创建学习率调度器
 
         # 如果是断点续训,尝试加载调度器状态
@@ -359,6 +357,7 @@ class log():
                     train_step, rating, step, writer, tb_name):
 
         """
+
         日志记录
 
         参数:
@@ -372,6 +371,7 @@ class log():
         - step: 梯度累计步进
         - writer: tensorboard文件夹
         - tb_name: tensorboard_log名称
+
         """
 
         self.model_path = model_path
@@ -434,7 +434,7 @@ class log():
         except (FileNotFoundError, json.JSONDecodeError):
             pass   # 如果文件不存在或为空,则返回0
         return 0
-
+    
     @staticmethod   # 不接受self参数
     def get_previous_epoch(log_file):
         """获取日志文件中最后一个记录的epoch轮次"""
@@ -452,11 +452,13 @@ class log():
 def is_finetune(model: nn.Module, model_name: str):
 
     """
+
     微调判定
 
     参数:
     - model (nn.Module): 要微调的模型
     - model_name (str): 预训练模型的文件名
+
     """
 
     model.load_state_dict(torch.load(model_name, weights_only=True))
@@ -472,14 +474,14 @@ def is_finetune(model: nn.Module, model_name: str):
 
 if __name__ == '__main__':
 
-    file_path = 'data\\sft_train.jsonl'
+    file_path = 'data\\test.jsonl'
     block_size = 128
     batch_size = 12
     # 训练集设置 jsonl格式
 
-    test_file_path = 'data\\sft_valid.json'
-    test_block_size = 64
-    test_batch_size = 24
+    test_file_path = 'data\\train_test.json'
+    test_block_size = 128
+    test_batch_size = 12
     # 测试集设置 json格式
 
     sp = spm.SentencePieceProcessor()
@@ -492,26 +494,26 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # 设备获取
 
-    model = transformer(vocab_size=vocab_size, padding_idx=padding_id, device='cuda')
+    model = transformer(vocab_size=vocab_size, padding_idx=padding_id)
     # 模型设置
 
-    epoch = 2
+    epoch = 10
     rating = 0.0001
     step = 16                   # 梯度累积步数
-    update_steps = 512         # 更新步数
+    update_steps = 512          # 更新步数
     writer_file = 'tr_logs'
     writer = SummaryWriter(writer_file)
-    wr_name = 'test_without_test'     # tensorboard记录名称
-    use_test = False
+    wr_name = 'test_pre2'     # tensorboard记录名称
+    use_test = True
     fin_tuning = False   # 是否微调 # 记得调低学习率
-    use_scheduler = False   # 是否启用动态学习率
+    use_scheduler = True   # 是否启用动态学习率
     continue_training = False   # 是否继续训练 (非断点续训, 而是加载已有模型继续训练)
     # 训练设置
 
-    model_path = 'tower.bin'
+    model_path = 'test2.bin'
     output_path = None   # None即覆盖原模型
-    log_file = 'test.log'
-    opz_path = 'tower.bin_optimizer.pth'
+    log_file = 'test2.log'
+    opz_path = 'test2.bin_optimizer.pth'
     tsp = log.get_previous_train_step(log_file)
     ep  = log.get_previous_epoch(log_file)
     # 信息设置
@@ -529,8 +531,8 @@ if __name__ == '__main__':
         print('微调设置成功')
     # 微调
 
-    data_processor = Talk_DialogueDataProcessor(file_path, sp_path, block_size)
-    dataset = Talk_GeneratorDialogueDataset(data_processor)
+    data_processor = DialogueDataProcessor(file_path, sp_path, block_size)
+    dataset = GeneratorDialogueDataset(data_processor)
     data_length = data_processor.data_length()
 
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False,   \
@@ -538,12 +540,12 @@ if __name__ == '__main__':
     # 训练集 dataset @ dataloader
     # 生成器加载 num_workers 只能为0
 
+    test_data_processor = DialogueDataProcessor(test_file_path, sp_path, test_block_size)
+
     if use_test:
-        test_data_processor = Talk_DialogueDataProcessor(test_file_path, sp_path, test_block_size)
-        test_dataset = Talk_DialogueDataset(test_data_processor)
+        test_dataset = DialogueDataset(test_data_processor)
         test_dataloader = DataLoader(test_dataset, batch_size=test_batch_size, shuffle=False,   \
                                     num_workers=8, pin_memory=True)
-    # 测试集 dataset @ dataloader
 
     else:
         test_dataloader = None
