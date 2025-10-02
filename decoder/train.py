@@ -287,7 +287,7 @@ class train():
         """保存模型与优化器参数"""
         torch.save(self.model.state_dict(), self.output_path)   # type: ignore     # 保存模型
         opt_dict = self.optimizer.state_dict()                                     # 续存优化器
-        torch.save(opt_dict, self.output_path)   # type: ignore                    # 保存优化器
+        torch.save(opt_dict, self.output_path+'_opz')   # type: ignore                    # 保存优化器
 
         if self.use_scheduler:   # 保存调度器
             scheduler_state = self.rate_scheduler.state_dict()
@@ -297,7 +297,7 @@ class train():
         """每epoch保存模型,用于防止训练出错"""
         torch.save(self.model.state_dict(), self.output_path+'_epoch'+str(self.history_epoch))   # type: ignore
         opt_dict = self.optimizer.state_dict() 
-        torch.save(opt_dict, self.output_path+'_epoch'+str(self.history_epoch))   # type: ignore
+        torch.save(opt_dict, self.output_path+'_epoch_opz'+str(self.history_epoch))   # type: ignore
 
         if self.use_scheduler:
             scheduler_state = self.rate_scheduler.state_dict()
