@@ -194,30 +194,6 @@ class decoder(nn.Module):
         return (final_output, mask)
 
 
-class Padding_Mask(nn.Module):
-    """填充索引掩码"""
-    def __init__(self, padding_idx: int):
-        """
-        padding_idx: 填充索引
-        """
-        super().__init__()
-        self.padding_idx = padding_idx
-
-    def forward(self, x: Tensor) -> Tensor:
-        """
-        - x: 输入序列 [batch, seq_len]
-        """
-        batch_size, seq_len = x.size(0), x.size(1)
-        padding_mask = torch.zeros(batch_size, seq_len, dtype=torch.float32, device=x.device)
-        padding_mask[x == self.padding_idx] = float('-inf')
-        padding_mask = padding_mask.reshape(batch_size, 1, 1, seq_len)
-        # 创建一个与 x 形状相同的全零矩阵
-        # 把 padding 位置设置为-inf
-        # 扩展维度
-
-        return padding_mask
-
-
 class transformer(nn.Module):   # 模型实现
 
     def __init__(self, decoder_num=8, head_num=8, d=1024, dk=128, dff=4096, vocab_size=32768,   \
@@ -270,9 +246,6 @@ class transformer(nn.Module):   # 模型实现
         # 共享weight和embedding权重
 
         self.softmax = nn.Softmax(dim=-1)   # 转换为概率分布
-
-        self.padding = Padding_Mask(self.padding_id).to(device)
-        # 填充掩码处理
 
         if init:   # 初始化模型权重
             self.init_weights()
@@ -335,9 +308,6 @@ class transformer(nn.Module):   # 模型实现
 
         x = x.to(self.device)
 
-        padding = self.padding(x)
-        # 生成填充掩码
-
         sequence_len = x.shape[1]
         # 获取输入张量x的第二个维度的大小
 
@@ -346,10 +316,7 @@ class transformer(nn.Module):   # 模型实现
         atta_mask = self.get_mask(sequence_len=sequence_len, data=x)
         # 创造掩码
 
-        mask = atta_mask + padding
-        # 结合填充掩码和注意力掩码
-
-        y, _ = self.decoders((ebd_x, mask))
+        y, _ = self.decoders((ebd_x, atta_mask))
         # 将带有位置编码的嵌入向量和掩码传递给解码器
         # 解码器返回的y是每个位置的输出向量
         # 将解码器的输出赋值给y,并且忽略注意力权重
