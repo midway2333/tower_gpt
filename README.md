@@ -184,6 +184,13 @@ LOGO 图标
 - 修改对话模板逻辑
 </details>
 
+<details close> 
+<summary>  <b>9.7更新</b> </summary>
+- 为 Agent 做好准备<br>
+- 新的分词器<br>
+- 支持 function call 与 reasoning 训练<br>
+</details>
+
 </details>
 
 <details open> 
